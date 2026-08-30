@@ -1,0 +1,136 @@
+x-backend-environment: &backend-environment
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-reminders}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-reminders}
+  APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Madrid}
+  INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:?Set INTERNAL_AUTH_SECRET in .env}
+  AUTH_USER_1_USERNAME: ${AUTH_USER_1_USERNAME:?Set AUTH_USER_1_USERNAME in .env}
+  AUTH_USER_1_PASSWORD: ${AUTH_USER_1_PASSWORD:?Set AUTH_USER_1_PASSWORD in .env}
+  AUTH_USER_2_USERNAME: ${AUTH_USER_2_USERNAME:?Set AUTH_USER_2_USERNAME in .env}
+  AUTH_USER_2_PASSWORD: ${AUTH_USER_2_PASSWORD:?Set AUTH_USER_2_PASSWORD in .env}
+  PURGE_INTERVAL_SECONDS: ${PURGE_INTERVAL_SECONDS:-3600}
+  DELETED_RETENTION_DAYS: ${DELETED_RETENTION_DAYS:-30}
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-reminders}
+      POSTGRES_USER: ${POSTGRES_USER:-reminders}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      target: runtime
+    environment: *backend-environment
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/openapi.json')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+      target: runtime
+      args:
+        VITE_APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Madrid}
+    environment:
+      AUTH_USER_1_USERNAME: ${AUTH_USER_1_USERNAME:?Set AUTH_USER_1_USERNAME in .env}
+      AUTH_USER_1_PASSWORD: ${AUTH_USER_1_PASSWORD:?Set AUTH_USER_1_PASSWORD in .env}
+      AUTH_USER_2_USERNAME: ${AUTH_USER_2_USERNAME:?Set AUTH_USER_2_USERNAME in .env}
+      AUTH_USER_2_PASSWORD: ${AUTH_USER_2_PASSWORD:?Set AUTH_USER_2_PASSWORD in .env}
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:?Set INTERNAL_AUTH_SECRET in .env}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+  backend-test:
+    profiles: ["test"]
+    build:
+      context: ./backend
+      target: test
+    environment:
+      <<: *backend-environment
+      TEST_POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-reminders}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-reminders}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["pytest", "--no-cov"]
+
+  frontend-test:
+    profiles: ["test"]
+    build:
+      context: ./frontend
+      target: test
+    command: ["npm", "run", "test"]
+
+  backend-lint:
+    profiles: ["lint"]
+    build:
+      context: ./backend
+      target: test
+    command:
+      [
+        "sh",
+        "-c",
+        "ruff check app tests alembic && ruff format --check app tests alembic && mypy app",
+      ]
+
+  frontend-lint:
+    profiles: ["lint"]
+    build:
+      context: ./frontend
+      target: test
+    command: ["sh", "-c", "npm run lint && npm run typecheck"]
+
+  backend-coverage:
+    profiles: ["coverage"]
+    build:
+      context: ./backend
+      target: test
+    environment:
+      <<: *backend-environment
+      TEST_POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-reminders}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-reminders}
+    depends_on:
+      db:
+        condition: service_healthy
+    command:
+      [
+        "sh",
+        "-c",
+        "coverage run -m pytest --no-cov && coverage report --show-missing --fail-under=70 && coverage xml",
+      ]
+
+  frontend-coverage:
+    profiles: ["coverage"]
+    build:
+      context: ./frontend
+      target: test
+    command: ["npm", "run", "test:coverage"]
+
+volumes:
+  postgres_data:

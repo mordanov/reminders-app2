@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Винтажный недельный планировщик для списка дел и заметок."
+    />
+    <title>Моя неделя</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#planner">Перейти к планировщику</a>
+
+    <main class="page-shell">
+      <section class="planner" id="planner" aria-labelledby="page-title">
+        <img class="ornament ornament--left" src="image_1.png" alt="" />
+        <img class="ornament ornament--right" src="image_2.png" alt="" />
+
+        <header class="hero">
+          <img class="hero__divider" src="image_3.png" alt="" />
+          <h1 id="page-title">Моя неделя</h1>
+          <p>список дел на каждый день</p>
+          <span class="spark spark--left" aria-hidden="true">✦</span>
+          <span class="spark spark--right" aria-hidden="true">✦</span>
+        </header>
+
+        <div class="week-grid">
+          <article class="day-card">
+            <h2><span>Понедельник</span></h2>
+            <label class="sr-only" for="monday">Дела на понедельник</label>
+            <textarea id="monday"></textarea>
+            <img class="day-card__flower day-card__flower--tall" src="image_4.png" alt="" />
+          </article>
+
+          <article class="day-card">
+            <h2><span>Вторник</span></h2>
+            <label class="sr-only" for="tuesday">Дела на вторник</label>
+            <textarea id="tuesday"></textarea>
+            <img class="day-card__flower" src="image_5.png" alt="" />
+          </article>
+
+          <article class="day-card">
+            <h2><span>Среда</span></h2>
+            <label class="sr-only" for="wednesday">Дела на среду</label>
+            <textarea id="wednesday"></textarea>
+            <img class="day-card__flower" src="image_6.png" alt="" />
+          </article>
+
+          <article class="day-card">
+            <h2><span>Четверг</span></h2>
+            <label class="sr-only" for="thursday">Дела на четверг</label>
+            <textarea id="thursday"></textarea>
+            <img class="day-card__flower" src="image_7.png" alt="" />
+          </article>
+
+          <article class="day-card">
+            <h2><span>Пятница</span></h2>
+            <label class="sr-only" for="friday">Дела на пятницу</label>
+            <textarea id="friday"></textarea>
+            <img class="day-card__flower" src="image_8.png" alt="" />
+          </article>
+
+          <article class="day-card">
+            <h2><span>Суббота</span></h2>
+            <label class="sr-only" for="saturday">Дела на субботу</label>
+            <textarea id="saturday"></textarea>
+            <img class="day-card__flower" src="image_9.png" alt="" />
+          </article>
+        </div>
+
+        <img class="footer-divider" src="image_10.png" alt="" />
+      </section>
+
+      <nav class="category-tabs" aria-label="Разделы планировщика">
+        <a class="category-tab category-tab--active" href="#books" aria-current="page">
+          <span>Книги</span><img src="image_11.png" alt="" />
+        </a>
+        <a class="category-tab" href="#films">
+          <span>Фильмы</span><img src="image_12.png" alt="" />
+        </a>
+        <a class="category-tab" href="#products">
+          <span>Продукты</span><img src="image_13.png" alt="" />
+        </a>
+        <a class="category-tab" href="#ideas">
+          <span>Идеи</span><img src="image_14.png" alt="" />
+        </a>
+        <a class="category-tab" href="#plans">
+          <span>Планы</span><img src="image_15.png" alt="" />
+        </a>
+        <a class="category-tab" href="#notes">
+          <span>Заметки</span><img src="image_16.png" alt="" />
+        </a>
+      </nav>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: reminders_test
+          POSTGRES_USER: reminders
+          POSTGRES_PASSWORD: reminders
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U reminders -d reminders_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql+asyncpg://reminders:reminders@localhost:5432/reminders_test
+      TEST_POSTGRES_URL: postgresql+asyncpg://reminders:reminders@localhost:5432/reminders_test
+      INTERNAL_AUTH_SECRET: ci-internal-secret
+      AUTH_USER_1_USERNAME: alice
+      AUTH_USER_1_PASSWORD: alice-ci-password
+      AUTH_USER_2_USERNAME: bob
+      AUTH_USER_2_PASSWORD: bob-ci-password
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --extra dev
+      - run: uv run ruff check app tests alembic
+      - run: uv run ruff format --check app tests alembic
+      - run: uv run mypy app
+      - run: uv run alembic upgrade head
+      - run: uv run coverage run -m pytest --no-cov
+      - run: uv run coverage report --show-missing --fail-under=70
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:coverage
+      - run: npm run build
+
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.example .env
+      - run: docker compose config --quiet
+      - run: docker compose build backend nginx
