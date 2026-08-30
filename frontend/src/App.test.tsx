@@ -66,59 +66,64 @@ describe("planner app", () => {
   });
 
   it("operates navigation, filters, calendar choices, and dialogs", async () => {
-    const user = userEvent.setup();
     const search = vi.spyOn(api, "search");
     renderApp();
     expect(await screen.findByRole("heading", { name: "Моя неделя" })).toBeInTheDocument();
     expect(await screen.findAllByRole("article")).toHaveLength(6);
 
-    await user.click(screen.getByRole("button", { name: "Новое напоминание" }));
+    fireEvent.click(screen.getByRole("button", { name: "Новое напоминание" }));
     expect(screen.getByRole("dialog", { name: "Напоминание" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Отмена" }));
+    fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
 
-    await user.click(screen.getByRole("button", { name: "Настроить" }));
+    fireEvent.click(screen.getByRole("button", { name: "Настроить" }));
     expect(screen.getByRole("dialog", { name: "Настройки календарей" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Закрыть" }));
+    fireEvent.click(screen.getByRole("button", { name: "Закрыть" }));
 
-    await user.click(screen.getByRole("button", { name: "Создать" }));
+    fireEvent.click(screen.getByRole("button", { name: "Создать" }));
     expect(screen.getByRole("dialog", { name: "Категории" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Отмена" }));
+    fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
 
-    await user.click(screen.getByRole("button", { name: /Книги/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Книги/ }));
     expect(screen.getByRole("heading", { name: "Книги" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Закрыть" }));
-    await user.click(screen.getByRole("button", { name: /Книги/ }));
-    await user.click(screen.getByRole("button", { name: /Книги/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Закрыть" }));
+    fireEvent.click(screen.getByRole("button", { name: /Книги/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Книги/ }));
 
-    await user.click(screen.getByRole("button", { name: "Фильтры" }));
-    await user.type(screen.getByRole("searchbox", { name: "Текст" }), "план");
+    fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
+    fireEvent.change(screen.getByRole("searchbox", { name: "Текст" }), {
+      target: { value: "план" },
+    });
     await waitFor(() => expect(search).toHaveBeenCalledWith({ text: "план", tag: undefined }));
-    await user.type(screen.getByRole("combobox", { name: "Теги" }), "focus");
+    fireEvent.change(screen.getByRole("combobox", { name: "Теги" }), {
+      target: { value: "focus" },
+    });
     await waitFor(() => expect(search).toHaveBeenCalledWith({ text: "план", tag: "focus" }));
-    await user.click(screen.getByRole("button", { name: "Обновить" }));
-    await user.click(screen.getByRole("button", { name: "Сбросить" }));
+    fireEvent.click(screen.getByRole("button", { name: "Обновить" }));
+    fireEvent.click(screen.getByRole("button", { name: "Сбросить" }));
     expect(screen.getByRole("searchbox", { name: "Текст" })).toHaveValue("");
 
-    await user.click(screen.getByRole("button", { name: "Предыдущая неделя" }));
-    await user.click(screen.getByRole("button", { name: "Следующая неделя" }));
-    await user.click(screen.getByRole("button", { name: "Сегодня" }));
+    fireEvent.click(screen.getByRole("button", { name: "Предыдущая неделя" }));
+    fireEvent.click(screen.getByRole("button", { name: "Следующая неделя" }));
+    fireEvent.click(screen.getByRole("button", { name: "Сегодня" }));
     const picker = screen.getAllByLabelText("Выбрать неделю").find((element) => element.tagName === "INPUT")!;
     fireEvent.change(picker, { target: { value: "" } });
     fireEvent.change(picker, { target: { value: "2026-09-03" } });
 
     const calendarChecks = screen.getAllByRole("checkbox").filter((element) => element.closest(".calendar-toggle"));
-    await user.click(calendarChecks[0]);
-    await user.click(calendarChecks[0]);
-    await user.click(screen.getByRole("button", { name: "Снять все" }));
+    fireEvent.click(calendarChecks[0]);
+    fireEvent.click(calendarChecks[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Снять все" }));
     await screen.findByText("Выбрано календарей: 0");
     await waitFor(() => expect(screen.getByRole("button", { name: "Новое напоминание" })).toBeEnabled());
-    await user.click(screen.getByRole("button", { name: "Новое напоминание" }));
+    fireEvent.click(screen.getByRole("button", { name: "Новое напоминание" }));
     const calendarSelect = screen.getByRole("combobox", { name: "Календарь" });
     await waitFor(() => expect(calendarSelect.querySelectorAll("option").length).toBeGreaterThan(0));
     expect(calendarSelect).not.toHaveValue("");
-    await user.click(screen.getByRole("button", { name: "Отмена" }));
+    fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
 
-    await user.selectOptions(screen.getByRole("combobox", { name: "Язык" }), "en");
+    fireEvent.change(screen.getByRole("combobox", { name: "Язык" }), {
+      target: { value: "en" },
+    });
     expect(await screen.findByRole("heading", { name: "My week" })).toBeInTheDocument();
   });
 
@@ -128,10 +133,10 @@ describe("planner app", () => {
     const toggle = vi.spyOn(api, "updateReminder");
     const remove = vi.spyOn(api, "deleteReminder");
     renderApp();
-    await screen.findAllByRole("article");
+    const editButtons = await screen.findAllByRole("button", { name: "Изменить" });
     await user.click(screen.getAllByRole("button", { name: "Выполнено" })[0]);
     await waitFor(() => expect(toggle).toHaveBeenCalled());
-    await user.click(screen.getAllByRole("button", { name: "Изменить" })[0]);
+    await user.click(editButtons[0]);
     expect(screen.getByRole("dialog", { name: "Напоминание" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Отмена" }));
     await user.click(screen.getAllByRole("button", { name: "Удалить" })[0]);

@@ -61,3 +61,39 @@ records after `DELETED_RETENTION_DAYS` (30 by default), checking every
 - Never expose port 8000 publicly. The backend trusts identity only when nginx includes
   the matching internal secret.
 - `/openapi.json` is intentionally public and contains the API shape but no user data.
+
+## Shared infrastructure
+
+Production is registered in the sibling `web-folders` repository as
+`https://reminders2.mainpage.ru`. The shared stack provides TLS, Basic Auth, routing,
+and certificate renewal. It runs these services:
+
+- `reminders2-db`: dedicated PostgreSQL 18 database, required because the shared
+  `recipes-db` cluster currently runs PostgreSQL 16.
+- `reminders2-backend`: API, migrations, user synchronization, purge scheduler, and
+  SSE publisher.
+- `reminders2-frontend`: nginx serving the compiled React single-page application.
+
+Local deployment remains unchanged and continues to use this repository's
+`docker-compose.yaml`.
+
+Before the first production deployment, add real `REMINDERS2_*` values to
+`/home/deploy/web-folders/.env`, then publish the backend and frontend images through
+`.github/workflows/build-deploy.yml`. Start the services and issue the certificate:
+
+```bash
+cd /home/deploy/web-folders
+docker compose pull reminders2-backend reminders2-frontend
+docker compose up -d reminders2-db reminders2-backend reminders2-frontend nginx
+docker compose exec certbot certbot certonly \
+  --webroot -w /var/www/certbot \
+  --email "$LETSENCRYPT_EMAIL" \
+  --agree-tos --no-eff-email \
+  -d reminders2.mainpage.ru
+docker compose up -d --force-recreate nginx
+curl -fsS https://reminders2.mainpage.ru/openapi.json >/dev/null
+```
+
+The shared edge creates its Basic Auth file from the same two configured users and
+passes `X-Authenticated-User` plus `X-Internal-Secret` to the backend. Keep the
+frontend and backend `REMINDERS2_INTERNAL_AUTH_SECRET` values identical.

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "vps-docker": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/aleksandr/Local/vps_mcp",
+        "run",
+        "vps-docker-mcp"
+      ]
+    }
+  }
+}

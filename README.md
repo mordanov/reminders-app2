@@ -48,3 +48,6 @@ Coverage fails below 70% for the backend or 90% for the frontend.
 - [Operations](docs/operations.md)
 
 The application UI supports Russian and English. Project documentation is English.
+
+Production deployment through the shared `web-folders` infrastructure is documented
+in [Operations](docs/operations.md#shared-infrastructure).
