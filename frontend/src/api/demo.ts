@@ -4,6 +4,7 @@ import type {
   Category,
   FloatingTask,
   Locale,
+  Notebook,
   Preferences,
   Reminder,
   ReminderDraft,
@@ -35,6 +36,7 @@ interface DemoState {
   floating: FloatingTask[];
   tags: Tag[];
   shares: Record<string, Share[]>;
+  notebooks?: Notebook[];
 }
 
 function uid(prefix: string): string {
@@ -436,6 +438,38 @@ export const demoApi = {
   },
   setLocale(locale: Locale): void {
     state.preferences.locale = locale;
+    save();
+  },
+  async notebooks(): Promise<Notebook[]> {
+    return clone(state.notebooks ?? []);
+  },
+  async createNotebook(title: string): Promise<Notebook> {
+    const notebook: Notebook = {
+      id: `nb-${Date.now()}`,
+      owner_id: user.id,
+      title,
+      content: "",
+      position: (state.notebooks ?? []).length,
+      version: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    state.notebooks = [...(state.notebooks ?? []), notebook];
+    save();
+    return clone(notebook);
+  },
+  async updateNotebook(notebook: Notebook, payload: { title?: string; content?: string }): Promise<Notebook> {
+    const item = (state.notebooks ?? []).find((n) => n.id === notebook.id);
+    if (!item) throw new Error("notebook not found");
+    if (payload.title !== undefined) item.title = payload.title;
+    if (payload.content !== undefined) item.content = payload.content;
+    item.version += 1;
+    item.updated_at = new Date().toISOString();
+    save();
+    return clone(item);
+  },
+  async deleteNotebook(notebook: Pick<Notebook, "id" | "version">): Promise<void> {
+    state.notebooks = (state.notebooks ?? []).filter((n) => n.id !== notebook.id);
     save();
   },
 };

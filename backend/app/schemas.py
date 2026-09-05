@@ -201,3 +201,24 @@ class WeekOut(BaseModel):
 
 class Message(BaseModel):
     detail: str
+
+
+class NotebookCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+
+
+class NotebookUpdate(BaseModel):
+    version: int = Field(ge=1)
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    content: str | None = None
+
+
+class NotebookOut(APIModel):
+    id: uuid.UUID
+    owner_id: uuid.UUID
+    title: str
+    content: str
+    position: int
+    version: int
+    created_at: datetime
+    updated_at: datetime

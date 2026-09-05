@@ -228,6 +228,23 @@ class UserPreference(Base, TimestampMixin):
     )
 
 
+class Notebook(Base, TimestampMixin, SoftDeleteMixin):
+    __tablename__ = "notebooks"
+    __table_args__ = (
+        CheckConstraint("length(title) BETWEEN 1 AND 200", name="notebook_title_length"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    title: Mapped[str] = mapped_column(String(200))
+    content: Mapped[str] = mapped_column(Text, default="", server_default="")
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    __mapper_args__ = {"version_id_col": version}
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

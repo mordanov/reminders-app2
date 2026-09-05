@@ -21,6 +21,7 @@ from app.models import (
     CalendarMember,
     FloatingCategory,
     FloatingTask,
+    Notebook,
     Reminder,
     ReminderKind,
     ReminderTag,
@@ -40,6 +41,9 @@ from app.schemas import (
     FloatingTaskOut,
     FloatingTaskUpdate,
     Message,
+    NotebookCreate,
+    NotebookOut,
+    NotebookUpdate,
     PreferenceOut,
     PreferenceUpdate,
     ReminderCreate,
@@ -975,6 +979,104 @@ async def delete_floating_task(
     await session.commit()
     await publish(request, "floating_task.deleted", item.id)
     return Message(detail="floating task scheduled for purge")
+
+
+@router.get("/notebooks", response_model=list[NotebookOut], tags=["notebooks"])
+async def list_notebooks(session: Session, user: CurrentUser) -> list[Notebook]:
+    return list(
+        (
+            await session.scalars(
+                select(Notebook)
+                .where(Notebook.owner_id == user.id, Notebook.deleted_at.is_(None))
+                .order_by(Notebook.position)
+            )
+        ).all()
+    )
+
+
+@router.post(
+    "/notebooks",
+    response_model=NotebookOut,
+    status_code=status.HTTP_201_CREATED,
+    tags=["notebooks"],
+)
+async def create_notebook(
+    payload: NotebookCreate, request: Request, session: Session, user: CurrentUser
+) -> Notebook:
+    maximum = await session.scalar(
+        select(func.max(Notebook.position)).where(
+            Notebook.owner_id == user.id, Notebook.deleted_at.is_(None)
+        )
+    )
+    notebook = Notebook(
+        id=uuid.uuid4(),
+        owner_id=user.id,
+        title=payload.title.strip(),
+        content="",
+        position=int(maximum if maximum is not None else -1) + 1,
+    )
+    session.add(notebook)
+    await audit(session, user, "notebook.create", "notebook", notebook.id)
+    await session.commit()
+    await session.refresh(notebook)
+    await publish(request, "notebook.created", notebook.id)
+    return notebook
+
+
+@router.patch("/notebooks/{notebook_id}", response_model=NotebookOut, tags=["notebooks"])
+async def update_notebook(
+    notebook_id: uuid.UUID,
+    payload: NotebookUpdate,
+    request: Request,
+    session: Session,
+    user: CurrentUser,
+) -> Notebook:
+    notebook = await session.scalar(
+        select(Notebook).where(
+            Notebook.id == notebook_id,
+            Notebook.owner_id == user.id,
+            Notebook.deleted_at.is_(None),
+        )
+    )
+    if notebook is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "notebook not found")
+    if notebook.version != payload.version:
+        raise HTTPException(status.HTTP_409_CONFLICT, "stale notebook version")
+    if payload.title is not None:
+        notebook.title = payload.title.strip()
+    if payload.content is not None:
+        notebook.content = payload.content
+    notebook.version += 1
+    await audit(session, user, "notebook.update", "notebook", notebook.id)
+    await session.commit()
+    await publish(request, "notebook.updated", notebook.id)
+    return notebook
+
+
+@router.delete("/notebooks/{notebook_id}", response_model=Message, tags=["notebooks"])
+async def delete_notebook(
+    notebook_id: uuid.UUID,
+    version: Annotated[int, Query(ge=1)],
+    request: Request,
+    session: Session,
+    user: CurrentUser,
+) -> Message:
+    notebook = await session.scalar(
+        select(Notebook).where(
+            Notebook.id == notebook_id,
+            Notebook.owner_id == user.id,
+            Notebook.deleted_at.is_(None),
+        )
+    )
+    if notebook is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "notebook not found")
+    if notebook.version != version:
+        raise HTTPException(status.HTTP_409_CONFLICT, "stale notebook version")
+    notebook.deleted_at = datetime.now(UTC)
+    await audit(session, user, "notebook.delete", "notebook", notebook.id)
+    await session.commit()
+    await publish(request, "notebook.deleted", notebook.id)
+    return Message(detail="notebook scheduled for purge")
 
 
 @router.get("/events", tags=["events"])

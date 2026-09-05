@@ -89,6 +89,17 @@ export interface SearchFilters {
   calendarId?: string;
 }
 
+export interface Notebook {
+  id: string;
+  owner_id: string;
+  title: string;
+  content: string;
+  position: number;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,

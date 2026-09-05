@@ -4,6 +4,7 @@ import type {
   Calendar,
   Category,
   FloatingTask,
+  Notebook,
   Preferences,
   Reminder,
   ReminderDraft,
@@ -74,6 +75,10 @@ export interface ApiClient {
   updateFloating(task: FloatingTask, payload: Partial<FloatingTask>): Promise<FloatingTask>;
   deleteFloating(task: Pick<FloatingTask, "id" | "version">): Promise<void>;
   reorderFloating(ids: string[], versions: Record<string, number>): Promise<FloatingTask[]>;
+  notebooks(): Promise<Notebook[]>;
+  createNotebook(title: string): Promise<Notebook>;
+  updateNotebook(notebook: Notebook, payload: { title?: string; content?: string }): Promise<Notebook>;
+  deleteNotebook(notebook: Pick<Notebook, "id" | "version">): Promise<void>;
 }
 
 export const httpApi: ApiClient = {
@@ -146,6 +151,13 @@ export const httpApi: ApiClient = {
     request(`/floating-tasks/${task.id}?version=${task.version}`, { method: "DELETE" }),
   reorderFloating: (ids, versions): Promise<FloatingTask[]> =>
     request("/floating-tasks/order", { method: "PUT", ...body({ ids, versions }) }),
+  notebooks: (): Promise<Notebook[]> => request("/notebooks"),
+  createNotebook: (title: string): Promise<Notebook> =>
+    request("/notebooks", { method: "POST", ...body({ title }) }),
+  updateNotebook: (notebook: Notebook, payload: { title?: string; content?: string }): Promise<Notebook> =>
+    request(`/notebooks/${notebook.id}`, { method: "PATCH", ...body({ ...payload, version: notebook.version }) }),
+  deleteNotebook: (notebook): Promise<void> =>
+    request(`/notebooks/${notebook.id}?version=${notebook.version}`, { method: "DELETE" }),
 };
 
 export const api: ApiClient = demoMode ? demoApi : httpApi;

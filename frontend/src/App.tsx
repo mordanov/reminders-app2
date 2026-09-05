@@ -7,8 +7,10 @@ import {
   Funnel,
   GearSix,
   GlobeHemisphereWest,
+  NotePencil,
   Plus,
   SpinnerGap,
+  Trash,
   WifiHigh,
   WifiSlash,
   X,
@@ -35,13 +37,14 @@ import { api } from "./api/client";
 import { CalendarDialog } from "./components/CalendarDialog";
 import { CategoryDialog } from "./components/CategoryDialog";
 import { CategoryPanel } from "./components/CategoryPanel";
+import { NotebookDialog } from "./components/NotebookDialog";
 import { ReminderDialog } from "./components/ReminderDialog";
 import { WeekPlanner } from "./components/WeekPlanner";
 import { useSse } from "./hooks/useSse";
 import { useWeekParam } from "./hooks/useWeekParam";
 import { formatWeekRange, startOfWorkWeek, toDateKey } from "./lib/date";
 import { filterWeekReminders, reorderedCategoryIds, visibleCategories } from "./lib/planner";
-import { ApiError, type Category, type Locale, type Reminder } from "./types";
+import { ApiError, type Category, type Locale, type Notebook, type Reminder } from "./types";
 
 const categoryImages = [11, 12, 13, 14, 15, 16];
 
@@ -105,8 +108,10 @@ function App() {
   const [filterTag, setFilterTag] = useState("");
   const [notice, setNotice] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [openNotebookId, setOpenNotebookId] = useState<string | null>(null);
 
   const meQuery = useQuery({ queryKey: ["me"], queryFn: api.me });
+  const notebooksQuery = useQuery({ queryKey: ["notebooks"], queryFn: api.notebooks });
   const preferencesQuery = useQuery({ queryKey: ["preferences"], queryFn: api.preferences });
   const calendarsQuery = useQuery({ queryKey: ["calendars"], queryFn: api.calendars });
   const categoriesQuery = useQuery({ queryKey: ["categories"], queryFn: api.categories });
@@ -205,6 +210,23 @@ function App() {
     onError: handleError,
   });
 
+  const createNotebook = useMutation({
+    mutationFn: (title: string) => api.createNotebook(title),
+    onSuccess: (nb) => {
+      queryClient.setQueryData<Notebook[]>(["notebooks"], (prev) => [...(prev ?? []), nb]);
+      setOpenNotebookId(nb.id);
+    },
+    onError: handleError,
+  });
+  const deleteNotebook = useMutation({
+    mutationFn: (nb: Notebook) => api.deleteNotebook(nb),
+    onSuccess: (_result, nb) => {
+      queryClient.setQueryData<Notebook[]>(["notebooks"], (prev) => prev?.filter((n) => n.id !== nb.id) ?? []);
+      if (openNotebookId === nb.id) setOpenNotebookId(null);
+    },
+    onError: handleError,
+  });
+
   const visibleReminders = useMemo(() => {
     const source = hasFilters ? searchQuery.data ?? [] : weekQuery.data?.reminders ?? [];
     return filterWeekReminders(source, selectedIds, weekParam.week);
@@ -271,6 +293,43 @@ function App() {
         ) : null}
 
         <div className="planner-layout">
+          <nav className="notebook-rail" aria-label={t("notebooks")}>
+            {(notebooksQuery.data ?? []).map((nb) => (
+              <div key={nb.id} className="notebook-tab-wrap">
+                <button
+                  type="button"
+                  className={`notebook-tab${openNotebookId === nb.id ? " is-active" : ""}`}
+                  onClick={() => setOpenNotebookId(openNotebookId === nb.id ? null : nb.id)}
+                >
+                  <NotePencil aria-hidden="true" />
+                  <span>{nb.title}</span>
+                </button>
+                <button
+                  type="button"
+                  className="notebook-tab-delete"
+                  aria-label={t("remove")}
+                  onClick={() => {
+                    if (window.confirm(t("remove"))) deleteNotebook.mutate(nb);
+                  }}
+                >
+                  <Trash aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              className="notebook-tab notebook-tab--new"
+              aria-label={t("newNotebook")}
+              onClick={() => {
+                const title = window.prompt(t("newNotebookTitle") ?? "Название блокнота");
+                if (title?.trim()) createNotebook.mutate(title.trim());
+              }}
+            >
+              <span aria-hidden="true">{t("create")}</span>
+              <Plus aria-hidden="true" />
+            </button>
+          </nav>
+
           <aside className="calendar-rail" aria-labelledby="calendar-list-title">
             <div className="rail-heading">
               <div>
@@ -468,6 +527,15 @@ function App() {
         ) : null}
       </div>
 
+      {openNotebookId ? (
+        <NotebookDialog
+          key={openNotebookId}
+          notebook={(notebooksQuery.data ?? []).find((n) => n.id === openNotebookId)!}
+          open={Boolean(openNotebookId)}
+          onOpenChange={(open) => { if (!open) setOpenNotebookId(null); }}
+          onError={handleError}
+        />
+      ) : null}
       <ReminderDialog
         open={reminderOpen}
         onOpenChange={setReminderOpen}
