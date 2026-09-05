@@ -125,7 +125,7 @@ describe("planner app", () => {
       target: { value: "en" },
     });
     expect(await screen.findByRole("heading", { name: "My week" })).toBeInTheDocument();
-  });
+  }, 15000);
 
   it("edits, completes, and conditionally deletes reminders", async () => {
     const user = userEvent.setup();

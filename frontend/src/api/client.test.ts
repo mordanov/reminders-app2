@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { httpApi, request } from "./client";
-import type { Calendar, Category, FloatingTask, Reminder, ReminderDraft } from "../types";
+import type { Calendar, Category, FloatingTask, Notebook, Reminder, ReminderDraft } from "../types";
 
 const calendar: Calendar = {
   id: "calendar-1",
@@ -31,6 +31,16 @@ const reminder: Reminder = {
   version: 4,
   tag_ids: [],
   created_at: "2026-08-20T00:00:00Z",
+};
+const notebook: Notebook = {
+  id: "notebook-1",
+  owner_id: "user-1",
+  title: "My Notebook",
+  content: "<p>Hello</p>",
+  position: 0,
+  version: 1,
+  created_at: "2026-09-05T00:00:00Z",
+  updated_at: "2026-09-05T00:00:00Z",
 };
 const floating: FloatingTask = {
   id: "floating-1",
@@ -100,6 +110,10 @@ describe("HTTP API contract", () => {
     await httpApi.updateFloating(floating, { category_id: "category-2", completed: true });
     await httpApi.deleteFloating(floating);
     await httpApi.reorderFloating([floating.id], { [floating.id]: floating.version });
+    await httpApi.notebooks();
+    await httpApi.createNotebook("My Notebook");
+    await httpApi.updateNotebook(notebook, { title: "Updated", content: "<p>hi</p>" });
+    await httpApi.deleteNotebook(notebook);
 
     const calls = fetchMock.mock.calls.map(([url, init]) => [String(url), init?.method ?? "GET", init?.body]);
     expect(calls).toContainEqual(["/api/weeks/2026-08-24?calendar_ids=calendar-1&calendar_ids=calendar-2", "GET", undefined]);
