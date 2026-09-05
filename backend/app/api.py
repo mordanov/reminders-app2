@@ -1049,6 +1049,7 @@ async def update_notebook(
     notebook.version += 1
     await audit(session, user, "notebook.update", "notebook", notebook.id)
     await session.commit()
+    await session.refresh(notebook)
     await publish(request, "notebook.updated", notebook.id)
     return notebook
 
