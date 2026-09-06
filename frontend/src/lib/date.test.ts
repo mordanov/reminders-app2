@@ -3,6 +3,7 @@ import {
   addDays,
   addWeeks,
   compareDateKeys,
+  contrastColor,
   currentDateInTimeZone,
   formatDay,
   formatDayHeading,
@@ -144,5 +145,13 @@ describe("date utilities", () => {
       zonedDateTimeToIso("2026-03-27T02:30", "Asia/Jerusalem"),
     ).toThrow(RangeError);
     vi.unstubAllEnvs();
+  });
+
+  it("returns contrasting text color for a given hex background", () => {
+    expect(contrastColor("#000000")).toBe("#ffffff"); // black bg → white text
+    expect(contrastColor("#FFFFFF")).toBe("#000000"); // white bg → black text
+    expect(contrastColor("#2563EB")).toBe("#ffffff"); // blue → white
+    expect(contrastColor("#FFFF00")).toBe("#000000"); // yellow → black
+    expect(contrastColor("#07090A")).toBe("#ffffff"); // very dark (c <= 0.03928 branch)
   });
 });

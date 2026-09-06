@@ -264,7 +264,7 @@ class ShoppingList(Base, TimestampMixin):
     owner_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
-    data: Mapped[dict] = mapped_column(JSON, default=dict, server_default="{}")
+    data: Mapped[dict[str, str]] = mapped_column(JSON, default=dict, server_default="{}")
 
 
 class AuditLog(Base):
