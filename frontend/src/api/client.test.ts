@@ -114,6 +114,9 @@ describe("HTTP API contract", () => {
     await httpApi.createNotebook("My Notebook");
     await httpApi.updateNotebook(notebook, { title: "Updated", content: "<p>hi</p>" });
     await httpApi.deleteNotebook(notebook);
+    await httpApi.month("2026-09", [calendar.id]);
+    await httpApi.weekNote("2026-09-01");
+    await httpApi.updateWeekNote("2026-09-01", "Test note");
 
     const calls = fetchMock.mock.calls.map(([url, init]) => [String(url), init?.method ?? "GET", init?.body]);
     expect(calls).toContainEqual(["/api/weeks/2026-08-24?calendar_ids=calendar-1&calendar_ids=calendar-2", "GET", undefined]);
@@ -125,6 +128,9 @@ describe("HTTP API contract", () => {
     expect(calls).toContainEqual(["/api/reminders/reminder-1", "PATCH", JSON.stringify({ completed: true, version: 4 })]);
     expect(calls).toContainEqual(["/api/categories/category-1", "PATCH", JSON.stringify({ name: "Reading", version: 2 })]);
     expect(calls).toContainEqual(["/api/floating-tasks/floating-1", "PATCH", JSON.stringify({ category_id: "category-2", completed: true, version: 5 })]);
+    expect(calls).toContainEqual(["/api/months/2026-09?calendar_ids=calendar-1", "GET", undefined]);
+    expect(calls).toContainEqual(["/api/week-notes/2026-09-01", "GET", undefined]);
+    expect(calls).toContainEqual(["/api/week-notes/2026-09-01", "PUT", JSON.stringify({ content: "Test note" })]);
   });
 
   it("does not turn an empty calendar selection into backend 'all calendars'", async () => {

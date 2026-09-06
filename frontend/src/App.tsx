@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowsDownUp,
   CalendarDots,
+  CaretDown,
   CaretLeft,
   CaretRight,
+  CaretUp,
   Funnel,
   GearSix,
   GlobeHemisphereWest,
@@ -37,12 +39,22 @@ import { api } from "./api/client";
 import { CalendarDialog } from "./components/CalendarDialog";
 import { CategoryDialog } from "./components/CategoryDialog";
 import { CategoryPanel } from "./components/CategoryPanel";
+import { DayView } from "./components/DayView";
+import { MonthView } from "./components/MonthView";
 import { NotebookDialog } from "./components/NotebookDialog";
 import { ReminderDialog } from "./components/ReminderDialog";
+import { WeekNoteArea } from "./components/WeekNoteArea";
 import { WeekPlanner } from "./components/WeekPlanner";
 import { useSse } from "./hooks/useSse";
-import { useWeekParam } from "./hooks/useWeekParam";
-import { formatWeekRange, startOfWorkWeek, toDateKey } from "./lib/date";
+import { useViewParam } from "./hooks/useViewParam";
+import {
+  formatDayHeading,
+  formatMonth,
+  formatWeekRange,
+  reminderDateKey,
+  startOfWorkWeek,
+  toDateKey,
+} from "./lib/date";
 import { filterWeekReminders, reorderedCategoryIds, visibleCategories } from "./lib/planner";
 import { ApiError, type Category, type Locale, type Notebook, type Reminder } from "./types";
 
@@ -93,14 +105,32 @@ function SortableCategoryButton({
   );
 }
 
+function tryLocalStorage(key: string, fallback: string): string {
+  try {
+    return localStorage.getItem(key) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function setLocalStorage(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // ignore
+  }
+}
+
 function App() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
-  const weekParam = useWeekParam();
+  const viewParam = useViewParam();
   const liveStatus = useSse(queryClient);
+
+  const [calOpen, setCalOpen] = useState(() => tryLocalStorage("calendarBarOpen", "false") === "true");
   const [reminderOpen, setReminderOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | undefined>();
-  const [initialDate, setInitialDate] = useState(weekParam.week);
+  const [initialDate, setInitialDate] = useState(viewParam.week);
   const [calendarSettingsOpen, setCalendarSettingsOpen] = useState(false);
   const [categoryCreateOpen, setCategoryCreateOpen] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
@@ -109,6 +139,12 @@ function App() {
   const [notice, setNotice] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [openNotebookId, setOpenNotebookId] = useState<string | null>(null);
+
+  const toggleCalOpen = () => {
+    const next = !calOpen;
+    setCalOpen(next);
+    setLocalStorage("calendarBarOpen", String(next));
+  };
 
   const meQuery = useQuery({ queryKey: ["me"], queryFn: api.me });
   const notebooksQuery = useQuery({ queryKey: ["notebooks"], queryFn: api.notebooks });
@@ -129,11 +165,19 @@ function App() {
     ],
     [calendars, selectedCalendars, selectedIds],
   );
+
   const weekQuery = useQuery({
-    queryKey: ["week", weekParam.week, selectedIds],
-    queryFn: () => api.week(weekParam.week, selectedIds),
-    enabled: Boolean(preferences),
+    queryKey: ["week", viewParam.week, selectedIds],
+    queryFn: () => api.week(viewParam.week, selectedIds),
+    enabled: Boolean(preferences) && (viewParam.view === "week" || viewParam.view === "day"),
   });
+
+  const monthQuery = useQuery({
+    queryKey: ["month", viewParam.month, selectedIds],
+    queryFn: () => api.month(viewParam.month!, selectedIds),
+    enabled: Boolean(preferences) && viewParam.view === "month" && Boolean(viewParam.month),
+  });
+
   const floatingQuery = useQuery({
     queryKey: ["floating", selectedIds],
     queryFn: () => api.floatingTasks(selectedIds),
@@ -177,12 +221,18 @@ function App() {
   const updateReminder = useMutation({
     mutationFn: ({ reminder, payload }: { reminder: Reminder; payload: Partial<Reminder> }) =>
       api.updateReminder(reminder, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["week"] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["week"] });
+      void queryClient.invalidateQueries({ queryKey: ["month"] });
+    },
     onError: handleError,
   });
   const deleteReminder = useMutation({
     mutationFn: (reminder: Reminder) => api.deleteReminder(reminder),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["week"] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["week"] });
+      void queryClient.invalidateQueries({ queryKey: ["month"] });
+    },
     onError: handleError,
   });
   const reorderDay = useMutation({
@@ -227,10 +277,22 @@ function App() {
     onError: handleError,
   });
 
-  const visibleReminders = useMemo(() => {
+  const weekReminders = useMemo(() => {
     const source = hasFilters ? searchQuery.data ?? [] : weekQuery.data?.reminders ?? [];
-    return filterWeekReminders(source, selectedIds, weekParam.week);
-  }, [hasFilters, searchQuery.data, selectedIds, weekParam.week, weekQuery.data?.reminders]);
+    return filterWeekReminders(source, selectedIds, viewParam.week);
+  }, [hasFilters, searchQuery.data, selectedIds, viewParam.week, weekQuery.data?.reminders]);
+
+  const visibleReminders = weekReminders;
+
+  const dayReminders = useMemo(() => {
+    if (!viewParam.day) return [];
+    return weekReminders.filter((r) => reminderDateKey(r) === viewParam.day);
+  }, [weekReminders, viewParam.day]);
+
+  const monthReminders = useMemo(() => {
+    if (!monthQuery.data) return [];
+    return monthQuery.data.reminders.filter((r) => selectedIds.includes(r.calendar_id));
+  }, [monthQuery.data, selectedIds]);
 
   const categories = useMemo(() => {
     return visibleCategories(
@@ -254,8 +316,50 @@ function App() {
     if (ids) reorderCategories.mutate(ids);
   };
 
-  const loading = meQuery.isLoading || preferencesQuery.isLoading || calendarsQuery.isLoading || weekQuery.isLoading || (hasFilters && searchQuery.isLoading);
-  const failed = meQuery.isError || preferencesQuery.isError || calendarsQuery.isError || weekQuery.isError || searchQuery.isError;
+  const locale = preferences?.locale ?? "ru";
+
+  const viewHeading = useMemo(() => {
+    if (viewParam.view === "day" && viewParam.day) return formatDayHeading(viewParam.day, locale);
+    if (viewParam.view === "month" && viewParam.month) return formatMonth(viewParam.month, locale);
+    return formatWeekRange(viewParam.week, locale);
+  }, [viewParam.view, viewParam.day, viewParam.month, viewParam.week, locale]);
+
+  const prevLabel = viewParam.view === "day" ? t("previousDay") : viewParam.view === "month" ? t("previousMonth") : t("previousWeek");
+  const nextLabel = viewParam.view === "day" ? t("nextDay") : viewParam.view === "month" ? t("nextMonth") : t("nextWeek");
+
+  const loading =
+    meQuery.isLoading ||
+    preferencesQuery.isLoading ||
+    calendarsQuery.isLoading ||
+    (viewParam.view !== "month" && weekQuery.isLoading) ||
+    (viewParam.view === "month" && monthQuery.isLoading) ||
+    (hasFilters && searchQuery.isLoading);
+  const failed =
+    meQuery.isError ||
+    preferencesQuery.isError ||
+    calendarsQuery.isError ||
+    weekQuery.isError ||
+    monthQuery.isError ||
+    searchQuery.isError;
+
+  const openCreateReminder = (date: string) => {
+    setEditingReminder(undefined);
+    setInitialDate(date);
+    setReminderOpen(true);
+  };
+
+  const openEditReminder = (reminder: Reminder) => {
+    setEditingReminder(reminder);
+    setInitialDate(reminder.due_date ?? reminder.due_at?.slice(0, 10) ?? viewParam.week);
+    setReminderOpen(true);
+  };
+
+  const onToggleReminder = (reminder: Reminder) =>
+    updateReminder.mutate({ reminder, payload: { completed: !reminder.completed } });
+
+  const onDeleteReminder = (reminder: Reminder) => {
+    if (window.confirm(t("remove"))) deleteReminder.mutate(reminder);
+  };
 
   return (
     <>
@@ -330,119 +434,187 @@ function App() {
             </button>
           </nav>
 
-          <aside className="calendar-rail" aria-labelledby="calendar-list-title">
-            <div className="rail-heading">
-              <div>
-                <p>{t("calendars")}</p>
-                <strong id="calendar-list-title">{t("selectedCount", { count: selectedIds.length })}</strong>
-              </div>
-              <button type="button" className="icon-button" onClick={() => setCalendarSettingsOpen(true)} aria-label={t("manage")}>
-                <GearSix aria-hidden="true" />
-              </button>
-            </div>
-            <div className="calendar-toggles">
-              {calendars.map((calendar) => {
-                const checked = selectedIds.includes(calendar.id);
-                return (
-                  <label
-                    key={calendar.id}
-                    className={`calendar-toggle${checked ? " is-active" : ""}`}
-                    style={{ "--calendar-color": calendar.color } as React.CSSProperties}
-                    title={t("calendarDetails", { name: calendar.name, type: calendar.is_owner ? t("owned") : t("shared") })}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => updatePreferences.mutate({
-                        selected_calendar_ids: checked
-                          ? selectedIds.filter((id) => id !== calendar.id)
-                          : [...selectedIds, calendar.id],
-                      })}
-                    />
-                    <span className="calendar-toggle__mark" />
-                    <span>{calendar.name}</span>
-                    <small>{t(calendar.is_owner ? "owned" : "shared")}</small>
-                  </label>
-                );
-              })}
-            </div>
-            <button
-              type="button"
-              className="button button--quiet button--full"
-              onClick={() => updatePreferences.mutate({ selected_calendar_ids: [] })}
-              disabled={!selectedIds.length}
-            >
-              {t("allOff")}
-            </button>
-            <div className={`filters${filtersOpen ? " is-open" : ""}`}>
-              <button type="button" className="filters__toggle" onClick={() => setFiltersOpen(!filtersOpen)} aria-expanded={filtersOpen}>
-                <Funnel aria-hidden="true" /> {t("filters")}
-              </button>
-              <div className="filters__body">
-                <label className="field">
-                  <span>{t("searchText")}</span>
-                  <input type="search" value={filterText} onChange={(event) => setFilterText(event.target.value)} />
-                </label>
-                <label className="field">
-                  <span>{t("searchTags")}</span>
-                  <input type="search" list="filter-tags" value={filterTag} onChange={(event) => setFilterTag(event.target.value)} />
-                  <datalist id="filter-tags">
-                    {tags.map((tag) => <option key={tag.id} value={tag.name} />)}
-                  </datalist>
-                </label>
-                <div className="filter-actions">
-                  <button type="button" className="button button--quiet" onClick={() => { setFilterText(""); setFilterTag(""); }}>
-                    {t("reset")}
-                  </button>
-                  <button type="button" className="button button--quiet" onClick={() => {
-                    void queryClient.invalidateQueries({ queryKey: ["week"] });
-                    void queryClient.invalidateQueries({ queryKey: ["search"] });
-                  }}>
-                    {t("reload")}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </aside>
-
           <main className="planner-paper" id="weekly-planner" tabIndex={-1}>
             <img className="ornament ornament--left" src="/assets/image_1.png" alt="" />
             <img className="ornament ornament--right" src="/assets/image_2.png" alt="" />
+
+            <div className={`calendar-bar${calOpen ? " is-open" : ""}`}>
+              <button
+                type="button"
+                className="calendar-bar__toggle"
+                onClick={toggleCalOpen}
+                aria-expanded={calOpen}
+                aria-label={t("calendars")}
+              >
+                <span className="calendar-bar__toggle-content">
+                  <CalendarDots aria-hidden="true" />
+                  <span>{t("calendars")}</span>
+                  <small>{t("selectedCount", { count: selectedIds.length })}</small>
+                </span>
+                {calOpen ? <CaretUp aria-hidden="true" /> : <CaretDown aria-hidden="true" />}
+              </button>
+              {calOpen && (
+                <div className="calendar-bar__body">
+                  <div className="calendar-bar__actions">
+                    <button type="button" className="icon-button" onClick={() => setCalendarSettingsOpen(true)} aria-label={t("manage")}>
+                      <GearSix aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className="button button--quiet"
+                      onClick={() => updatePreferences.mutate({ selected_calendar_ids: [] })}
+                      disabled={!selectedIds.length}
+                    >
+                      {t("allOff")}
+                    </button>
+                  </div>
+                  <div className="calendar-toggles">
+                    {calendars.map((calendar) => {
+                      const checked = selectedIds.includes(calendar.id);
+                      return (
+                        <label
+                          key={calendar.id}
+                          className={`calendar-toggle${checked ? " is-active" : ""}`}
+                          style={{ "--calendar-color": calendar.color } as React.CSSProperties}
+                          title={t("calendarDetails", { name: calendar.name, type: calendar.is_owner ? t("owned") : t("shared") })}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => updatePreferences.mutate({
+                              selected_calendar_ids: checked
+                                ? selectedIds.filter((id) => id !== calendar.id)
+                                : [...selectedIds, calendar.id],
+                            })}
+                          />
+                          <span className="calendar-toggle__mark" />
+                          <span>{calendar.name}</span>
+                          <small>{t(calendar.is_owner ? "owned" : "shared")}</small>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className={`filters${filtersOpen ? " is-open" : ""}`}>
+                    <button type="button" className="filters__toggle" onClick={() => setFiltersOpen(!filtersOpen)} aria-expanded={filtersOpen}>
+                      <Funnel aria-hidden="true" /> {t("filters")}
+                    </button>
+                    <div className="filters__body">
+                      <label className="field">
+                        <span>{t("searchText")}</span>
+                        <input
+                          type="search"
+                          role="searchbox"
+                          aria-label={t("searchText")}
+                          value={filterText}
+                          onChange={(event) => setFilterText(event.target.value)}
+                        />
+                      </label>
+                      <label className="field">
+                        <span>{t("searchTags")}</span>
+                        <select
+                          role="combobox"
+                          aria-label={t("searchTags")}
+                          value={filterTag}
+                          onChange={(event) => setFilterTag(event.target.value)}
+                        >
+                          <option value="" />
+                          {tags.map((tag) => <option key={tag.id} value={tag.name}>{tag.name}</option>)}
+                        </select>
+                      </label>
+                      <div className="filter-actions">
+                        <button type="button" className="button button--quiet" onClick={() => { setFilterText(""); setFilterTag(""); }}>
+                          {t("reset")}
+                        </button>
+                        <button type="button" className="button button--quiet" onClick={() => {
+                          void queryClient.invalidateQueries({ queryKey: ["week"] });
+                          void queryClient.invalidateQueries({ queryKey: ["search"] });
+                        }}>
+                          {t("reload")}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <section className="planner-hero" aria-labelledby="page-title">
               <img src="/assets/image_3.png" alt="" />
               <p>{t("subtitle")}</p>
-              <h1 id="page-title">{t("appName")}</h1>
-              <div className="week-range">{formatWeekRange(weekParam.week, preferences?.locale ?? "ru")}</div>
+              <h1 id="page-title">
+                {viewParam.view === "day" ? t("myDay") : viewParam.view === "month" ? t("myMonth") : t("myWeek")}
+              </h1>
+              <div className="week-range">{viewHeading}</div>
             </section>
+
             <div className="week-toolbar" aria-label={t("chooseWeek")}>
-              <button type="button" className="icon-button" onClick={weekParam.previous} aria-label={t("previousWeek")}>
+              <div className="view-switcher" role="group">
+                <button
+                  type="button"
+                  className={`button button--quiet${viewParam.view === "day" ? " is-active" : ""}`}
+                  aria-pressed={viewParam.view === "day"}
+                  onClick={viewParam.switchToDay}
+                >
+                  {t("viewDay")}
+                </button>
+                <button
+                  type="button"
+                  className={`button button--quiet${viewParam.view === "week" ? " is-active" : ""}`}
+                  aria-pressed={viewParam.view === "week"}
+                  onClick={viewParam.switchToWeek}
+                >
+                  {t("viewWeek")}
+                </button>
+                <button
+                  type="button"
+                  className={`button button--quiet${viewParam.view === "month" ? " is-active" : ""}`}
+                  aria-pressed={viewParam.view === "month"}
+                  onClick={viewParam.switchToMonth}
+                >
+                  {t("viewMonth")}
+                </button>
+              </div>
+              <button type="button" className="icon-button" onClick={viewParam.prev} aria-label={prevLabel}>
                 <CaretLeft aria-hidden="true" />
               </button>
-              <button type="button" className="button button--quiet" onClick={weekParam.today}>{t("today")}</button>
-              <label className="week-picker">
-                <CalendarDots aria-hidden="true" />
-                <span className="sr-only">{t("chooseWeek")}</span>
-                <input
-                  type="date"
-                  value={weekParam.week}
-                  onChange={(event) => {
-                    if (!event.target.value) return;
-                    weekParam.setWeek(toDateKey(startOfWorkWeek(new Date(`${event.target.value}T00:00:00`))));
-                  }}
-                />
-              </label>
-              <button type="button" className="icon-button" onClick={weekParam.next} aria-label={t("nextWeek")}>
+              <button type="button" className="button button--quiet" onClick={viewParam.today}>{t("today")}</button>
+              {viewParam.view === "week" && (
+                <label className="week-picker">
+                  <CalendarDots aria-hidden="true" />
+                  <span className="sr-only">{t("chooseWeek")}</span>
+                  <input
+                    type="date"
+                    value={viewParam.week}
+                    aria-label={t("chooseWeek")}
+                    onChange={(event) => {
+                      if (!event.target.value) return;
+                      viewParam.setWeek(toDateKey(startOfWorkWeek(new Date(`${event.target.value}T00:00:00`))));
+                    }}
+                  />
+                </label>
+              )}
+              {viewParam.view === "day" && (
+                <label className="week-picker">
+                  <CalendarDots aria-hidden="true" />
+                  <span className="sr-only">{t("chooseDate")}</span>
+                  <input
+                    type="date"
+                    value={viewParam.day ?? ""}
+                    aria-label={t("chooseDate")}
+                    onChange={(event) => {
+                      if (event.target.value) viewParam.setDay(event.target.value);
+                    }}
+                  />
+                </label>
+              )}
+              <button type="button" className="icon-button" onClick={viewParam.next} aria-label={nextLabel}>
                 <CaretRight aria-hidden="true" />
               </button>
               <button
                 type="button"
                 className="button button--primary new-reminder-button"
                 disabled={!calendars.length}
-                onClick={() => {
-                  setEditingReminder(undefined);
-                  setInitialDate(weekParam.week);
-                  setReminderOpen(true);
-                }}
+                onClick={() => openCreateReminder(viewParam.day ?? viewParam.week)}
               >
                 <Plus aria-hidden="true" /> {t("newReminder")}
               </button>
@@ -455,33 +627,49 @@ function App() {
                 <p>{t("loadError")}</p>
                 <button type="button" className="button button--primary" onClick={() => void queryClient.invalidateQueries()}>{t("retry")}</button>
               </div>
+            ) : viewParam.view === "day" && viewParam.day ? (
+              <DayView
+                date={viewParam.day}
+                reminders={dayReminders}
+                calendars={calendars}
+                tags={tags}
+                locale={locale}
+                canCreate={calendars.length > 0}
+                onCreate={openCreateReminder}
+                onEdit={openEditReminder}
+                onToggle={onToggleReminder}
+                onDelete={onDeleteReminder}
+              />
+            ) : viewParam.view === "month" && viewParam.month ? (
+              <MonthView
+                month={viewParam.month}
+                reminders={monthReminders}
+                locale={locale}
+                onDayClick={viewParam.gotoDay}
+              />
             ) : (
               <WeekPlanner
-                week={weekParam.week}
+                week={viewParam.week}
                 reminders={visibleReminders}
                 calendars={calendars}
                 tags={tags}
-                locale={preferences?.locale ?? "ru"}
+                locale={locale}
                 canCreate={calendars.length > 0}
-                onCreate={(date) => {
-                  setEditingReminder(undefined);
-                  setInitialDate(date);
-                  setReminderOpen(true);
-                }}
-                onEdit={(reminder) => {
-                  setEditingReminder(reminder);
-                  setInitialDate(reminder.due_date ?? reminder.due_at?.slice(0, 10) ?? weekParam.week);
-                  setReminderOpen(true);
-                }}
-                onToggle={(reminder) => updateReminder.mutate({ reminder, payload: { completed: !reminder.completed } })}
-                onDelete={(reminder) => {
-                  if (window.confirm(t("remove"))) deleteReminder.mutate(reminder);
-                }}
+                onCreate={(date) => openCreateReminder(date)}
+                onEdit={openEditReminder}
+                onToggle={onToggleReminder}
+                onDelete={onDeleteReminder}
                 onReorder={(columns) => {
                   if (!hasFilters) reorderDay.mutate(columns);
                 }}
+                onDayClick={viewParam.gotoDay}
               />
             )}
+
+            {viewParam.view === "week" && meQuery.data && (
+              <WeekNoteArea weekStart={viewParam.week} />
+            )}
+
             <img className="footer-divider" src="/assets/image_10.png" alt="" />
           </main>
 

@@ -51,6 +51,7 @@ interface WeekPlannerProps {
   onToggle: (reminder: Reminder) => void;
   onDelete: (reminder: Reminder) => void;
   onReorder: (columns: Array<{ date: string; reminder_ids: string[] }>) => void;
+  onDayClick?: (dateKey: string) => void;
 }
 
 function TaskCard({
@@ -199,6 +200,7 @@ function DayColumn({
   onToggle,
   onDelete,
   onKeyboardMove,
+  onDayClick,
 }: {
   date: Date;
   dayIndex: number;
@@ -212,6 +214,7 @@ function DayColumn({
   onToggle: (reminder: Reminder) => void;
   onDelete: (reminder: Reminder) => void;
   onKeyboardMove: (reminder: Reminder, direction: "up" | "down" | "previous" | "next") => void;
+  onDayClick?: (dateKey: string) => void;
 }) {
   const { t } = useTranslation();
   const key = toDateKey(date);
@@ -225,8 +228,21 @@ function DayColumn({
     <article ref={droppable.setNodeRef} className={`day-column${droppable.isOver ? " is-drop-target" : ""}`} aria-labelledby={`day-${key}`}>
       <header className="day-column__header">
         <div>
-          <h2 id={`day-${key}`}>{labels.weekday}</h2>
-          <time dateTime={key}>{labels.date}</time>
+          {onDayClick ? (
+            <button
+              type="button"
+              className="day-column__heading-btn"
+              onClick={() => onDayClick(key)}
+            >
+              <h2 id={`day-${key}`}>{labels.weekday}</h2>
+              <time dateTime={key}>{labels.date}</time>
+            </button>
+          ) : (
+            <>
+              <h2 id={`day-${key}`}>{labels.weekday}</h2>
+              <time dateTime={key}>{labels.date}</time>
+            </>
+          )}
         </div>
         <button
           type="button"
@@ -283,6 +299,7 @@ export function WeekPlanner({
   onToggle,
   onDelete,
   onReorder,
+  onDayClick,
 }: WeekPlannerProps) {
   const days = visibleDays(week);
   const sensors = useSensors(
@@ -324,6 +341,7 @@ export function WeekPlanner({
             onToggle={onToggle}
             onDelete={onDelete}
             onKeyboardMove={onKeyboardMove}
+            onDayClick={onDayClick}
           />
         ))}
       </section>

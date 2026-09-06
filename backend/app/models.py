@@ -16,6 +16,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     Uuid,
     text,
 )
@@ -243,6 +244,18 @@ class Notebook(Base, TimestampMixin, SoftDeleteMixin):
     position: Mapped[int] = mapped_column(Integer, default=0)
     version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     __mapper_args__ = {"version_id_col": version}
+
+
+class WeekNote(Base, TimestampMixin):
+    __tablename__ = "week_notes"
+    __table_args__ = (UniqueConstraint("owner_id", "week_start"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    week_start: Mapped[date] = mapped_column(Date, nullable=False)
+    content: Mapped[str] = mapped_column(Text, default="", server_default="")
 
 
 class AuditLog(Base):

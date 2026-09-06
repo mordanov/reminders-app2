@@ -222,3 +222,18 @@ class NotebookOut(APIModel):
     version: int
     created_at: datetime
     updated_at: datetime
+
+
+class WeekNoteOut(BaseModel):
+    week_start: date
+    content: str
+
+
+class WeekNoteIn(BaseModel):
+    content: str = Field(default="", max_length=1000)
+
+
+class MonthOut(BaseModel):
+    year: int
+    month: int
+    reminders: list[ReminderOut]

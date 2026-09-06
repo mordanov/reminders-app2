@@ -71,6 +71,9 @@ describe("planner app", () => {
     expect(await screen.findByRole("heading", { name: "Моя неделя" })).toBeInTheDocument();
     expect(await screen.findAllByRole("article")).toHaveLength(6);
 
+    // calendar bar is collapsed by default — open it to expose all calendar controls
+    fireEvent.click(screen.getByRole("button", { name: "Календари" }));
+
     fireEvent.click(screen.getByRole("button", { name: "Новое напоминание" }));
     expect(screen.getByRole("dialog", { name: "Напоминание" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Отмена" }));

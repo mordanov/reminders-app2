@@ -149,3 +149,95 @@ export function isValidWeek(value: string | null): value is string {
 export function compareDateKeys(a: string, b: string): number {
   return (parseDate(a).getTime() - parseDate(b).getTime()) / dayMs;
 }
+
+export function toYearMonth(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+export function currentMonth(timeZone = APP_TIME_ZONE): string {
+  return toYearMonth(currentDateInTimeZone(new Date(), timeZone));
+}
+
+export function prevMonth(ym: string): string {
+  const [year, month] = ym.split("-").map(Number);
+  const d = new Date(year, month - 2, 1);
+  return toYearMonth(d);
+}
+
+export function nextMonth(ym: string): string {
+  const [year, month] = ym.split("-").map(Number);
+  const d = new Date(year, month, 1);
+  return toYearMonth(d);
+}
+
+export function monthWeeks(ym: string): Date[][] {
+  const [year, month] = ym.split("-").map(Number);
+  const first = new Date(year, month - 1, 1);
+  const last = new Date(year, month, 0);
+  const weekday = first.getDay();
+  const startOffset = weekday === 0 ? -6 : 1 - weekday;
+  const start = addDays(first, startOffset);
+  const rows: Date[][] = [];
+  let cur = start;
+  while (cur <= last || rows.length < 4) {
+    const week: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      week.push(new Date(cur));
+      cur = addDays(cur, 1);
+    }
+    rows.push(week);
+    if (cur > last && rows.length >= 4) break;
+  }
+  return rows;
+}
+
+export function prevDay(dk: string): string {
+  return toDateKey(addDays(parseDate(dk), -1));
+}
+
+export function nextDay(dk: string): string {
+  return toDateKey(addDays(parseDate(dk), 1));
+}
+
+export function timeSlots(): string[] {
+  const slots: string[] = [];
+  for (let h = 5; h <= 23; h++) {
+    slots.push(`${String(h).padStart(2, "0")}:00`);
+    if (h < 23) slots.push(`${String(h).padStart(2, "0")}:30`);
+  }
+  return slots;
+}
+
+export function slotKey(iso: string, timeZone = APP_TIME_ZONE): string {
+  const parts = zonedParts(new Date(iso), timeZone);
+  const h = Number(parts.hour);
+  const m = Number(parts.minute) >= 30 ? 30 : 0;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+export function formatMonth(ym: string, locale: Locale): string {
+  const [year, month] = ym.split("-").map(Number);
+  return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(
+    new Date(year, month - 1, 1),
+  );
+}
+
+export function formatDayHeading(dk: string, locale: Locale): string {
+  const date = parseDate(dk);
+  return new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(date);
+}
+
+export function isValidMonth(value: string | null): value is string {
+  return !!value && /^\d{4}-\d{2}$/.test(value);
+}
+
+export function isValidDay(value: string | null): value is string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  return !Number.isNaN(parseDate(value).getTime());
+}
+
+export function weekForDay(dk: string): string {
+  return toDateKey(startOfWorkWeek(parseDate(dk)));
+}

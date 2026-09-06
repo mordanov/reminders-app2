@@ -100,6 +100,17 @@ export interface Notebook {
   updated_at: string;
 }
 
+export interface WeekNote {
+  week_start: string;
+  content: string;
+}
+
+export interface MonthData {
+  year: number;
+  month: number;
+  reminders: Reminder[];
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,

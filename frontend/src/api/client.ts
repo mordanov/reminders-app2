@@ -4,6 +4,7 @@ import type {
   Calendar,
   Category,
   FloatingTask,
+  MonthData,
   Notebook,
   Preferences,
   Reminder,
@@ -13,6 +14,7 @@ import type {
   Tag,
   User,
   Week,
+  WeekNote,
 } from "../types";
 import { addDays, parseDate, toDateKey } from "../lib/date";
 
@@ -79,6 +81,9 @@ export interface ApiClient {
   createNotebook(title: string): Promise<Notebook>;
   updateNotebook(notebook: Notebook, payload: { title?: string; content?: string }): Promise<Notebook>;
   deleteNotebook(notebook: Pick<Notebook, "id" | "version">): Promise<void>;
+  month(yearMonth: string, calendarIds: string[]): Promise<MonthData>;
+  weekNote(weekStart: string): Promise<WeekNote>;
+  updateWeekNote(weekStart: string, content: string): Promise<WeekNote>;
 }
 
 export const httpApi: ApiClient = {
@@ -158,6 +163,18 @@ export const httpApi: ApiClient = {
     request(`/notebooks/${notebook.id}`, { method: "PATCH", ...body({ ...payload, version: notebook.version }) }),
   deleteNotebook: (notebook): Promise<void> =>
     request(`/notebooks/${notebook.id}?version=${notebook.version}`, { method: "DELETE" }),
+  month: (yearMonth: string, calendarIds: string[]): Promise<MonthData> => {
+    if (!calendarIds.length) {
+      const [year, month] = yearMonth.split("-").map(Number);
+      return Promise.resolve({ year, month, reminders: [] });
+    }
+    const search = new URLSearchParams();
+    calendarIds.forEach((id) => search.append("calendar_ids", id));
+    return request(`/months/${yearMonth}?${search}`);
+  },
+  weekNote: (weekStart: string): Promise<WeekNote> => request(`/week-notes/${weekStart}`),
+  updateWeekNote: (weekStart: string, content: string): Promise<WeekNote> =>
+    request(`/week-notes/${weekStart}`, { method: "PUT", ...body({ content }) }),
 };
 
 export const api: ApiClient = demoMode ? demoApi : httpApi;

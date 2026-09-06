@@ -4,6 +4,7 @@ import type {
   Category,
   FloatingTask,
   Locale,
+  MonthData,
   Notebook,
   Preferences,
   Reminder,
@@ -13,6 +14,7 @@ import type {
   Tag,
   User,
   Week,
+  WeekNote,
 } from "../types";
 
 const user: User = { id: "user-demo", username: "demo", active: true };
@@ -37,6 +39,7 @@ interface DemoState {
   tags: Tag[];
   shares: Record<string, Share[]>;
   notebooks?: Notebook[];
+  weekNotes?: Record<string, string>;
 }
 
 function uid(prefix: string): string {
@@ -471,5 +474,28 @@ export const demoApi = {
   async deleteNotebook(notebook: Pick<Notebook, "id" | "version">): Promise<void> {
     state.notebooks = (state.notebooks ?? []).filter((n) => n.id !== notebook.id);
     save();
+  },
+  async month(yearMonth: string, calendarIds: string[]): Promise<MonthData> {
+    const [year, month] = yearMonth.split("-").map(Number);
+    const monthStart = new Date(year, month - 1, 1);
+    const nextMonth = new Date(year, month, 1);
+    const reminders = state.reminders.filter((r) => {
+      const calOk = !calendarIds.length || calendarIds.includes(r.calendar_id);
+      if (!calOk) return false;
+      if (r.due_date) {
+        return r.due_date >= toDateKey(monthStart) && r.due_date < toDateKey(nextMonth);
+      }
+      return false;
+    });
+    return { year, month, reminders: clone(reminders) };
+  },
+  async weekNote(weekStart: string): Promise<WeekNote> {
+    const content = (state.weekNotes ?? {})[weekStart] ?? "";
+    return { week_start: weekStart, content };
+  },
+  async updateWeekNote(weekStart: string, content: string): Promise<WeekNote> {
+    state.weekNotes = { ...(state.weekNotes ?? {}), [weekStart]: content };
+    save();
+    return { week_start: weekStart, content };
   },
 };

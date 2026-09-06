@@ -28,6 +28,7 @@ from app.models import (
     Tag,
     User,
     UserPreference,
+    WeekNote,
 )
 from app.schemas import (
     CalendarCreate,
@@ -41,6 +42,7 @@ from app.schemas import (
     FloatingTaskOut,
     FloatingTaskUpdate,
     Message,
+    MonthOut,
     NotebookCreate,
     NotebookOut,
     NotebookUpdate,
@@ -56,6 +58,8 @@ from app.schemas import (
     TagCreate,
     TagOut,
     UserOut,
+    WeekNoteIn,
+    WeekNoteOut,
     WeekOut,
 )
 from app.security import current_user
@@ -1078,6 +1082,100 @@ async def delete_notebook(
     await session.commit()
     await publish(request, "notebook.deleted", notebook.id)
     return Message(detail="notebook scheduled for purge")
+
+
+@router.get("/months/{year_month}", response_model=MonthOut, tags=["reminders"])
+async def get_month(
+    year_month: str,
+    session: Session,
+    user: CurrentUser,
+    settings: AppSettings,
+    calendar_ids: Annotated[list[uuid.UUID] | None, Query()] = None,
+) -> MonthOut:
+    try:
+        year, month = int(year_month[:4]), int(year_month[5:7])
+        if len(year_month) != 7 or year_month[4] != "-" or not (1 <= month <= 12):
+            raise ValueError
+    except (ValueError, IndexError):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "year_month must be YYYY-MM")
+    month_start = date(year, month, 1)
+    next_month = date(year + (month // 12), (month % 12) + 1, 1)
+    allowed = accessible_calendars(user.id).subquery()
+    conditions = [Reminder.calendar_id.in_(select(allowed.c.id))]
+    if calendar_ids:
+        conditions.append(Reminder.calendar_id.in_(calendar_ids))
+    zone = ZoneInfo(settings.app_timezone)
+    start_at = datetime.combine(month_start, datetime.min.time(), zone).astimezone(UTC)
+    end_at = datetime.combine(next_month, datetime.min.time(), zone).astimezone(UTC)
+    reminders = (
+        await session.scalars(
+            select(Reminder)
+            .where(
+                Reminder.deleted_at.is_(None),
+                *conditions,
+                or_(
+                    and_(Reminder.due_date >= month_start, Reminder.due_date < next_month),
+                    and_(Reminder.due_at >= start_at, Reminder.due_at < end_at),
+                ),
+            )
+            .order_by(
+                Reminder.due_date,
+                Reminder.day_order,
+                Reminder.due_at,
+                Reminder.created_at,
+            )
+        )
+    ).all()
+    return MonthOut(
+        year=year,
+        month=month,
+        reminders=await reminder_outputs(session, list(reminders)),
+    )
+
+
+@router.get("/week-notes/{week_start}", response_model=WeekNoteOut, tags=["week-notes"])
+async def get_week_note(
+    week_start: date,
+    session: Session,
+    user: CurrentUser,
+) -> WeekNoteOut:
+    if week_start.weekday() != 0:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "week_start must be Monday")
+    note = await session.scalar(
+        select(WeekNote).where(
+            WeekNote.owner_id == user.id, WeekNote.week_start == week_start
+        )
+    )
+    return WeekNoteOut(week_start=week_start, content=note.content if note else "")
+
+
+@router.put("/week-notes/{week_start}", response_model=WeekNoteOut, tags=["week-notes"])
+async def upsert_week_note(
+    week_start: date,
+    payload: WeekNoteIn,
+    session: Session,
+    user: CurrentUser,
+) -> WeekNoteOut:
+    if week_start.weekday() != 0:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "week_start must be Monday")
+    note = await session.scalar(
+        select(WeekNote).where(
+            WeekNote.owner_id == user.id, WeekNote.week_start == week_start
+        )
+    )
+    if note is None:
+        note = WeekNote(
+            id=uuid.uuid4(),
+            owner_id=user.id,
+            week_start=week_start,
+            content=payload.content,
+        )
+        session.add(note)
+    else:
+        note.content = payload.content
+    await session.commit()
+    await session.refresh(note)
+    return WeekNoteOut(week_start=note.week_start, content=note.content)
 
 
 @router.get("/events", tags=["events"])
