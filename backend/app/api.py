@@ -1144,9 +1144,7 @@ async def get_week_note(
     if week_start.weekday() != 0:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "week_start must be Monday")
     note = await session.scalar(
-        select(WeekNote).where(
-            WeekNote.owner_id == user.id, WeekNote.week_start == week_start
-        )
+        select(WeekNote).where(WeekNote.owner_id == user.id, WeekNote.week_start == week_start)
     )
     return WeekNoteOut(week_start=week_start, content=note.content if note else "")
 
@@ -1161,9 +1159,7 @@ async def upsert_week_note(
     if week_start.weekday() != 0:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "week_start must be Monday")
     note = await session.scalar(
-        select(WeekNote).where(
-            WeekNote.owner_id == user.id, WeekNote.week_start == week_start
-        )
+        select(WeekNote).where(WeekNote.owner_id == user.id, WeekNote.week_start == week_start)
     )
     if note is None:
         note = WeekNote(
