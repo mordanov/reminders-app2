@@ -11,6 +11,7 @@ import type {
   ReminderDraft,
   SearchFilters,
   Share,
+  ShoppingList,
   Tag,
   User,
   Week,
@@ -40,6 +41,7 @@ interface DemoState {
   shares: Record<string, Share[]>;
   notebooks?: Notebook[];
   weekNotes?: Record<string, string>;
+  shoppingList?: Record<string, string>;
 }
 
 function uid(prefix: string): string {
@@ -497,5 +499,13 @@ export const demoApi = {
     state.weekNotes = { ...(state.weekNotes ?? {}), [weekStart]: content };
     save();
     return { week_start: weekStart, content };
+  },
+  async shoppingList(): Promise<ShoppingList> {
+    return { data: state.shoppingList ?? {} };
+  },
+  async updateShoppingList(data: Record<string, string>): Promise<ShoppingList> {
+    state.shoppingList = data;
+    save();
+    return { data };
   },
 };

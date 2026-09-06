@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Check, Clock, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
-import { formatTime, reminderDateKey, slotKey, timeSlots } from "../lib/date";
+import { contrastColor, formatTime, reminderDateKey, slotKey, timeSlots } from "../lib/date";
 import type { Calendar, Locale, Reminder, Tag } from "../types";
 
 interface DayViewProps {
@@ -35,7 +35,11 @@ function ReminderRow({
   return (
     <div
       className={`day-view-reminder${reminder.completed ? " completed" : ""}`}
-      style={calendar ? { borderLeftColor: calendar.color } : undefined}
+      style={calendar ? {
+        backgroundColor: calendar.color,
+        color: contrastColor(calendar.color),
+        borderLeftColor: "transparent",
+      } : undefined}
     >
       <button
         className="icon-btn"

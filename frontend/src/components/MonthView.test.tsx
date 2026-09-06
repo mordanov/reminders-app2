@@ -22,14 +22,14 @@ const reminder: Reminder = {
 describe("MonthView", () => {
   it("renders 7 weekday header columns", () => {
     const { container } = render(
-      <MonthView month="2026-09" reminders={[]} locale="ru" onDayClick={vi.fn()} />,
+      <MonthView month="2026-09" reminders={[]} calendars={[]} locale="ru" onDayClick={vi.fn()} />,
     );
     expect(container.querySelectorAll(".month-view-weekday")).toHaveLength(7);
   });
 
   it("renders day cells for all dates in September 2026", () => {
     render(
-      <MonthView month="2026-09" reminders={[]} locale="ru" onDayClick={vi.fn()} />,
+      <MonthView month="2026-09" reminders={[]} calendars={[]} locale="ru" onDayClick={vi.fn()} />,
     );
     // September 7 is inside the month — its button should exist
     expect(screen.getByRole("button", { name: /2026-09-07/ })).toBeInTheDocument();
@@ -37,7 +37,7 @@ describe("MonthView", () => {
 
   it("shows a reminder text in its day cell", () => {
     render(
-      <MonthView month="2026-09" reminders={[reminder]} locale="ru" onDayClick={vi.fn()} />,
+      <MonthView month="2026-09" reminders={[reminder]} calendars={[]} locale="ru" onDayClick={vi.fn()} />,
     );
     expect(screen.getByText("September task")).toBeInTheDocument();
   });
@@ -46,7 +46,7 @@ describe("MonthView", () => {
     const user = userEvent.setup();
     const onDayClick = vi.fn();
     render(
-      <MonthView month="2026-09" reminders={[]} locale="ru" onDayClick={onDayClick} />,
+      <MonthView month="2026-09" reminders={[]} calendars={[]} locale="ru" onDayClick={onDayClick} />,
     );
     await user.click(screen.getByRole("button", { name: /2026-09-15/ }));
     expect(onDayClick).toHaveBeenCalledWith("2026-09-15");

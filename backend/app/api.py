@@ -26,6 +26,7 @@ from app.models import (
     ReminderKind,
     ReminderTag,
     Tag,
+    ShoppingList,
     User,
     UserPreference,
     WeekNote,
@@ -58,6 +59,8 @@ from app.schemas import (
     TagCreate,
     TagOut,
     UserOut,
+    ShoppingListIn,
+    ShoppingListOut,
     WeekNoteIn,
     WeekNoteOut,
     WeekOut,
@@ -1174,6 +1177,27 @@ async def upsert_week_note(
     await session.commit()
     await session.refresh(note)
     return WeekNoteOut(week_start=note.week_start, content=note.content)
+
+
+@router.get("/shopping-list", response_model=ShoppingListOut, tags=["shopping"])
+async def get_shopping_list(user: CurrentUser, session: Session) -> ShoppingListOut:
+    row = await session.get(ShoppingList, user.id)
+    return ShoppingListOut(data=row.data if row else {})
+
+
+@router.put("/shopping-list", response_model=ShoppingListOut, tags=["shopping"])
+async def update_shopping_list(
+    payload: ShoppingListIn, user: CurrentUser, session: Session
+) -> ShoppingListOut:
+    row = await session.get(ShoppingList, user.id)
+    if row is None:
+        row = ShoppingList(owner_id=user.id, data=payload.data)
+        session.add(row)
+    else:
+        row.data = payload.data
+    await session.commit()
+    await session.refresh(row)
+    return ShoppingListOut(data=row.data)
 
 
 @router.get("/events", tags=["events"])

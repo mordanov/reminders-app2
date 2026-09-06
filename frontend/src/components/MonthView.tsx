@@ -1,24 +1,30 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { currentDateInTimeZone, formatTime, monthWeeks, reminderDateKey, toDateKey } from "../lib/date";
-import type { Locale, Reminder } from "../types";
+import { contrastColor, currentDateInTimeZone, formatTime, monthWeeks, reminderDateKey, toDateKey } from "../lib/date";
+import type { Calendar, Locale, Reminder } from "../types";
 
 interface MonthViewProps {
   month: string;
   reminders: Reminder[];
   locale: Locale;
+  calendars: Calendar[];
   onDayClick: (dateKey: string) => void;
 }
 
 const MAX_VISIBLE = 4;
 
-export function MonthView({ month, reminders, locale, onDayClick }: MonthViewProps) {
+export function MonthView({ month, reminders, locale, calendars, onDayClick }: MonthViewProps) {
   const { t } = useTranslation();
   const [year, monthNum] = month.split("-").map(Number);
 
   const todayKey = useMemo(() => toDateKey(currentDateInTimeZone()), []);
 
   const weeks = useMemo(() => monthWeeks(month), [month]);
+
+  const calendarMap = useMemo(
+    () => Object.fromEntries(calendars.map((c) => [c.id, c])),
+    [calendars],
+  );
 
   const remindersByDay = useMemo(() => {
     const map: Record<string, Reminder[]> = {};
@@ -70,14 +76,21 @@ export function MonthView({ month, reminders, locale, onDayClick }: MonthViewPro
               >
                 <span className="month-day-number">{date.getDate()}</span>
                 <div className="month-day-events">
-                  {dayReminders.slice(0, MAX_VISIBLE).map((r) => (
-                    <div key={r.id} className="month-event">
-                      {r.due_at && (
-                        <span className="month-event-time">{formatTime(r.due_at, locale)}</span>
-                      )}
-                      <span className="month-event-text">{r.text}</span>
-                    </div>
-                  ))}
+                  {dayReminders.slice(0, MAX_VISIBLE).map((r) => {
+                    const cal = calendarMap[r.calendar_id];
+                    return (
+                      <div
+                        key={r.id}
+                        className="month-event"
+                        style={cal ? { backgroundColor: cal.color, color: contrastColor(cal.color) } : undefined}
+                      >
+                        {r.due_at && (
+                          <span className="month-event-time">{formatTime(r.due_at, locale)}</span>
+                        )}
+                        <span className="month-event-text">{r.text}</span>
+                      </div>
+                    );
+                  })}
                   {extra > 0 && (
                     <div className="month-event-more">+{extra}</div>
                   )}

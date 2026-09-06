@@ -11,6 +11,7 @@ import type {
   ReminderDraft,
   Share,
   SearchFilters,
+  ShoppingList,
   Tag,
   User,
   Week,
@@ -84,6 +85,8 @@ export interface ApiClient {
   month(yearMonth: string, calendarIds: string[]): Promise<MonthData>;
   weekNote(weekStart: string): Promise<WeekNote>;
   updateWeekNote(weekStart: string, content: string): Promise<WeekNote>;
+  shoppingList(): Promise<ShoppingList>;
+  updateShoppingList(data: Record<string, string>): Promise<ShoppingList>;
 }
 
 export const httpApi: ApiClient = {
@@ -175,6 +178,9 @@ export const httpApi: ApiClient = {
   weekNote: (weekStart: string): Promise<WeekNote> => request(`/week-notes/${weekStart}`),
   updateWeekNote: (weekStart: string, content: string): Promise<WeekNote> =>
     request(`/week-notes/${weekStart}`, { method: "PUT", ...body({ content }) }),
+  shoppingList: (): Promise<ShoppingList> => request("/shopping-list"),
+  updateShoppingList: (data: Record<string, string>): Promise<ShoppingList> =>
+    request("/shopping-list", { method: "PUT", ...body({ data }) }),
 };
 
 export const api: ApiClient = demoMode ? demoApi : httpApi;

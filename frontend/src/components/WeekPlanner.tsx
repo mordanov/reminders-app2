@@ -29,7 +29,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslation } from "react-i18next";
-import { formatDay, formatTime, toDateKey, visibleDays } from "../lib/date";
+import { contrastColor, formatDay, formatTime, toDateKey, visibleDays } from "../lib/date";
 import {
   buildWeekColumns,
   moveDayByKeyboard,
@@ -81,14 +81,19 @@ function TaskCard({
 }) {
   const { t } = useTranslation();
   const sortable = useSortable({ id: reminder.id, disabled: reminder.kind !== "DAY" });
-  const style = {
+  const cardStyle = {
     transform: CSS.Transform.toString(sortable.transform),
     transition: sortable.transition,
+    ...(calendar ? {
+      backgroundColor: calendar.color,
+      color: contrastColor(calendar.color),
+      borderLeftColor: calendar.color,
+    } : {}),
   };
   return (
     <li
       ref={sortable.setNodeRef}
-      style={style}
+      style={cardStyle}
       className={`reminder-card reminder-card--${reminder.kind.toLocaleLowerCase()}${reminder.completed ? " is-completed" : ""}`}
     >
       {reminder.kind === "DAY" ? (
@@ -113,13 +118,13 @@ function TaskCard({
       </button>
       <details className="task-details">
         <summary>
-          <span className="task-title" style={{ color: calendar?.color }}>
+          <span className="task-title">
             {reminder.text}
           </span>
           <CaretDown aria-hidden="true" />
         </summary>
         <div className="task-details__content">
-          <p style={{ color: calendar?.color }}>{reminder.text}</p>
+          <p>{reminder.text}</p>
           <div className="task-meta">
             {reminder.due_at ? <time dateTime={reminder.due_at}>{formatTime(reminder.due_at, locale)}</time> : null}
             {calendar ? (

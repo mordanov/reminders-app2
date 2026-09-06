@@ -258,6 +258,15 @@ class WeekNote(Base, TimestampMixin):
     content: Mapped[str] = mapped_column(Text, default="", server_default="")
 
 
+class ShoppingList(Base, TimestampMixin):
+    __tablename__ = "shopping_lists"
+
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    data: Mapped[dict] = mapped_column(JSON, default=dict, server_default="{}")
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

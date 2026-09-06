@@ -111,6 +111,10 @@ export interface MonthData {
   reminders: Reminder[];
 }
 
+export interface ShoppingList {
+  data: Record<string, string>;
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,

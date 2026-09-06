@@ -237,3 +237,11 @@ class MonthOut(BaseModel):
     year: int
     month: int
     reminders: list[ReminderOut]
+
+
+class ShoppingListOut(BaseModel):
+    data: dict[str, str]
+
+
+class ShoppingListIn(BaseModel):
+    data: dict[str, str] = Field(default_factory=dict)

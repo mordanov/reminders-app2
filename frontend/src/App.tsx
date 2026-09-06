@@ -37,6 +37,7 @@ import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/rea
 import { useTranslation } from "react-i18next";
 import { api } from "./api/client";
 import { CalendarDialog } from "./components/CalendarDialog";
+import { ShoppingDialog } from "./components/ShoppingDialog";
 import { CategoryDialog } from "./components/CategoryDialog";
 import { CategoryPanel } from "./components/CategoryPanel";
 import { DayView } from "./components/DayView";
@@ -139,6 +140,7 @@ function App() {
   const [notice, setNotice] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [openNotebookId, setOpenNotebookId] = useState<string | null>(null);
+  const [shoppingOpen, setShoppingOpen] = useState(false);
 
   const toggleCalOpen = () => {
     const next = !calOpen;
@@ -541,9 +543,21 @@ function App() {
             <section className="planner-hero" aria-labelledby="page-title">
               <img src="/assets/image_3.png" alt="" />
               <p>{t("subtitle")}</p>
-              <h1 id="page-title">
-                {viewParam.view === "day" ? t("myDay") : viewParam.view === "month" ? t("myMonth") : t("myWeek")}
-              </h1>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <h1 id="page-title">
+                  {viewParam.view === "day" ? t("myDay") : viewParam.view === "month" ? t("myMonth") : t("myWeek")}
+                </h1>
+                {viewParam.view === "month" && (
+                  <button
+                    type="button"
+                    className="button button--quiet"
+                    onClick={() => setShoppingOpen(true)}
+                    style={{ flexShrink: 0 }}
+                  >
+                    🛒 Магазины
+                  </button>
+                )}
+              </div>
               <div className="week-range">{viewHeading}</div>
             </section>
 
@@ -645,6 +659,7 @@ function App() {
                 month={viewParam.month}
                 reminders={monthReminders}
                 locale={locale}
+                calendars={calendars}
                 onDayClick={viewParam.gotoDay}
               />
             ) : (
@@ -744,6 +759,7 @@ function App() {
         onOpenChange={setCategoryCreateOpen}
         onError={handleError}
       />
+      <ShoppingDialog open={shoppingOpen} onOpenChange={setShoppingOpen} />
     </>
   );
 }
