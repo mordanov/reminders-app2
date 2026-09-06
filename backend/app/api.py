@@ -1097,7 +1097,9 @@ async def get_month(
         if len(year_month) != 7 or year_month[4] != "-" or not (1 <= month <= 12):
             raise ValueError
     except (ValueError, IndexError) as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "year_month must be YYYY-MM") from exc
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "year_month must be YYYY-MM"
+        ) from exc
     month_start = date(year, month, 1)
     next_month = date(year + (month // 12), (month % 12) + 1, 1)
     allowed = accessible_calendars(user.id).subquery()
