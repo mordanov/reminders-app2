@@ -77,7 +77,7 @@ export function ShoppingDialog({ open, onOpenChange }: ShoppingDialogProps) {
           </button>
         </div>
         <div className="shopping-grid">
-          {FIXED_ROWS.map((row, ri) =>
+          {FIXED_ROWS.map((row) =>
             row.map((store) => (
               <div key={store.key} className="shopping-cell">
                 <label className="shopping-cell__label">
