@@ -543,7 +543,7 @@ function App() {
             <section className="planner-hero" aria-labelledby="page-title">
               <img src="/assets/image_3.png" alt="" />
               <p>{t("subtitle")}</p>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ position: "relative" }}>
                 <h1 id="page-title">
                   {viewParam.view === "day" ? t("myDay") : viewParam.view === "month" ? t("myMonth") : t("myWeek")}
                 </h1>
@@ -552,7 +552,7 @@ function App() {
                     type="button"
                     className="button button--quiet"
                     onClick={() => setShoppingOpen(true)}
-                    style={{ flexShrink: 0 }}
+                    style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)" }}
                   >
                     🛒 Магазины
                   </button>
