@@ -3,6 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from sqlalchemy import (
     JSON,
@@ -256,6 +257,16 @@ class WeekNote(Base, TimestampMixin):
     )
     week_start: Mapped[date] = mapped_column(Date, nullable=False)
     content: Mapped[str] = mapped_column(Text, default="", server_default="")
+
+
+class HabitTracker(Base, TimestampMixin):
+    __tablename__ = "habit_trackers"
+
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    habits: Mapped[list[Any]] = mapped_column(JSON, default=list, server_default="[]")
+    completions: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, server_default="{}")
 
 
 class ShoppingList(Base, TimestampMixin):

@@ -21,6 +21,7 @@ from app.models import (
     CalendarMember,
     FloatingCategory,
     FloatingTask,
+    HabitTracker,
     Notebook,
     Reminder,
     ReminderKind,
@@ -42,6 +43,8 @@ from app.schemas import (
     FloatingTaskCreate,
     FloatingTaskOut,
     FloatingTaskUpdate,
+    HabitTrackerIn,
+    HabitTrackerOut,
     Message,
     MonthOut,
     NotebookCreate,
@@ -1198,6 +1201,30 @@ async def update_shopping_list(
     await session.commit()
     await session.refresh(row)
     return ShoppingListOut(data=row.data)
+
+
+@router.get("/habit-tracker", response_model=HabitTrackerOut, tags=["habits"])
+async def get_habit_tracker(user: CurrentUser, session: Session) -> HabitTrackerOut:
+    row = await session.get(HabitTracker, user.id)
+    if row is None:
+        return HabitTrackerOut(habits=[], completions={})
+    return HabitTrackerOut(habits=row.habits, completions=row.completions)
+
+
+@router.put("/habit-tracker", response_model=HabitTrackerOut, tags=["habits"])
+async def update_habit_tracker(
+    payload: HabitTrackerIn, user: CurrentUser, session: Session
+) -> HabitTrackerOut:
+    row = await session.get(HabitTracker, user.id)
+    if row is None:
+        row = HabitTracker(owner_id=user.id, habits=payload.habits, completions=payload.completions)
+        session.add(row)
+    else:
+        row.habits = payload.habits
+        row.completions = payload.completions
+    await session.commit()
+    await session.refresh(row)
+    return HabitTrackerOut(habits=row.habits, completions=row.completions)
 
 
 @router.get("/events", tags=["events"])

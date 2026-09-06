@@ -239,6 +239,16 @@ class MonthOut(BaseModel):
     reminders: list[ReminderOut]
 
 
+class HabitTrackerOut(BaseModel):
+    habits: list[dict[str, str]]
+    completions: dict[str, bool]
+
+
+class HabitTrackerIn(BaseModel):
+    habits: list[dict[str, str]] = Field(default_factory=list)
+    completions: dict[str, bool] = Field(default_factory=dict)
+
+
 class ShoppingListOut(BaseModel):
     data: dict[str, str]
 

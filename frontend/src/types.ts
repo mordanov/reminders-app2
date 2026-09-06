@@ -111,6 +111,16 @@ export interface MonthData {
   reminders: Reminder[];
 }
 
+export interface HabitItem {
+  id: string;
+  name: string;
+}
+
+export interface HabitTracker {
+  habits: HabitItem[];
+  completions: Record<string, boolean>;
+}
+
 export interface ShoppingList {
   data: Record<string, string>;
 }

@@ -3,6 +3,8 @@ import type {
   Calendar,
   Category,
   FloatingTask,
+  HabitItem,
+  HabitTracker,
   Locale,
   MonthData,
   Notebook,
@@ -42,6 +44,7 @@ interface DemoState {
   notebooks?: Notebook[];
   weekNotes?: Record<string, string>;
   shoppingList?: Record<string, string>;
+  habitTracker?: { habits: HabitItem[]; completions: Record<string, boolean> };
 }
 
 function uid(prefix: string): string {
@@ -507,5 +510,16 @@ export const demoApi = {
     state.shoppingList = data;
     save();
     return { data };
+  },
+  async habitTracker(): Promise<HabitTracker> {
+    return { habits: state.habitTracker?.habits ?? [], completions: state.habitTracker?.completions ?? {} };
+  },
+  async updateHabitTracker(
+    habits: HabitItem[],
+    completions: Record<string, boolean>,
+  ): Promise<HabitTracker> {
+    state.habitTracker = { habits, completions };
+    save();
+    return { habits, completions };
   },
 };

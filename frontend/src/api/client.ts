@@ -4,6 +4,8 @@ import type {
   Calendar,
   Category,
   FloatingTask,
+  HabitItem,
+  HabitTracker,
   MonthData,
   Notebook,
   Preferences,
@@ -87,6 +89,8 @@ export interface ApiClient {
   updateWeekNote(weekStart: string, content: string): Promise<WeekNote>;
   shoppingList(): Promise<ShoppingList>;
   updateShoppingList(data: Record<string, string>): Promise<ShoppingList>;
+  habitTracker(): Promise<HabitTracker>;
+  updateHabitTracker(habits: HabitItem[], completions: Record<string, boolean>): Promise<HabitTracker>;
 }
 
 export const httpApi: ApiClient = {
@@ -181,6 +185,12 @@ export const httpApi: ApiClient = {
   shoppingList: (): Promise<ShoppingList> => request("/shopping-list"),
   updateShoppingList: (data: Record<string, string>): Promise<ShoppingList> =>
     request("/shopping-list", { method: "PUT", ...body({ data }) }),
+  habitTracker: (): Promise<HabitTracker> => request("/habit-tracker"),
+  updateHabitTracker: (
+    habits: HabitItem[],
+    completions: Record<string, boolean>,
+  ): Promise<HabitTracker> =>
+    request("/habit-tracker", { method: "PUT", ...body({ habits, completions }) }),
 };
 
 export const api: ApiClient = demoMode ? demoApi : httpApi;

@@ -37,6 +37,7 @@ import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/rea
 import { useTranslation } from "react-i18next";
 import { api } from "./api/client";
 import { CalendarDialog } from "./components/CalendarDialog";
+import { HabitTrackerDialog } from "./components/HabitTrackerDialog";
 import { ShoppingDialog } from "./components/ShoppingDialog";
 import { CategoryDialog } from "./components/CategoryDialog";
 import { CategoryPanel } from "./components/CategoryPanel";
@@ -141,6 +142,7 @@ function App() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [openNotebookId, setOpenNotebookId] = useState<string | null>(null);
   const [shoppingOpen, setShoppingOpen] = useState(false);
+  const [habitTrackerOpen, setHabitTrackerOpen] = useState(false);
 
   const toggleCalOpen = () => {
     const next = !calOpen;
@@ -548,14 +550,24 @@ function App() {
                   {viewParam.view === "day" ? t("myDay") : viewParam.view === "month" ? t("myMonth") : t("myWeek")}
                 </h1>
                 {viewParam.view === "month" && (
-                  <button
-                    type="button"
-                    className="button button--quiet"
-                    onClick={() => setShoppingOpen(true)}
-                    style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)" }}
-                  >
-                    🛒 Магазины
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="button button--quiet"
+                      onClick={() => setHabitTrackerOpen(true)}
+                      style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }}
+                    >
+                      📋 Трекер привычек
+                    </button>
+                    <button
+                      type="button"
+                      className="button button--quiet"
+                      onClick={() => setShoppingOpen(true)}
+                      style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)" }}
+                    >
+                      🛒 Магазины
+                    </button>
+                  </>
                 )}
               </div>
               <div className="week-range">{viewHeading}</div>
@@ -760,6 +772,7 @@ function App() {
         onError={handleError}
       />
       <ShoppingDialog open={shoppingOpen} onOpenChange={setShoppingOpen} />
+      <HabitTrackerDialog open={habitTrackerOpen} onOpenChange={setHabitTrackerOpen} />
     </>
   );
 }
