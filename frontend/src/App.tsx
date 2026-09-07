@@ -11,6 +11,7 @@ import {
   GlobeHemisphereWest,
   NotePencil,
   Plus,
+  SignOut,
   SpinnerGap,
   Trash,
   WifiHigh,
@@ -389,6 +390,16 @@ function App() {
               <option value="en">EN</option>
             </select>
           </label>
+          <button
+            type="button"
+            className="topbar__logout"
+            onClick={() => { window.location.href = "/logout"; }}
+            title={meQuery.data ? t("loggedInAs", { username: meQuery.data.username }) : t("logout")}
+            aria-label={t("logout")}
+          >
+            <SignOut aria-hidden="true" />
+            <span>{t("logout")}</span>
+          </button>
         </header>
 
         {notice ? (

@@ -13,6 +13,12 @@ server {
     auth_basic "Reminders";
     auth_basic_user_file /etc/nginx/auth/.htpasswd;
 
+    location = /logout {
+        auth_basic off;
+        add_header 'WWW-Authenticate' 'Basic realm="Reminders"' always;
+        return 401;
+    }
+
     location = /openapi.json {
         auth_basic off;
         proxy_pass http://reminders_api/openapi.json;

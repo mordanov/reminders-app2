@@ -119,6 +119,8 @@ export const resources = {
       textColor: "Цвет текста",
       insertImage: "Вставить изображение",
       imageUrl: "URL изображения",
+      logout: "Выйти",
+      loggedInAs: "Вы вошли как {{username}}",
     },
   },
   en: {
@@ -238,6 +240,8 @@ export const resources = {
       textColor: "Text color",
       insertImage: "Insert image",
       imageUrl: "Image URL",
+      logout: "Log out",
+      loggedInAs: "Logged in as {{username}}",
     },
   },
 } as const;

@@ -182,6 +182,26 @@ select:disabled {
   border-radius: 4px;
 }
 
+.topbar__logout {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 12px;
+  color: var(--olive);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font: 0.85rem/1 system-ui, sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.topbar__logout:hover {
+  background: rgba(132, 96, 43, 0.08);
+  border-color: rgba(132, 96, 43, 0.25);
+}
+
 .planner-layout {
   position: relative;
   display: grid;
