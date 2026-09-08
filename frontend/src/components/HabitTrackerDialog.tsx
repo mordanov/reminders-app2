@@ -19,6 +19,33 @@ export function HabitTrackerDialog({ open, onOpenChange }: HabitTrackerDialogPro
   const queryClient = useQueryClient();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pointerDownOnOverlay = useRef(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const el = dialogRef.current;
+    if (!el) return;
+
+    try {
+      const raw = localStorage.getItem('habit_dialog_size');
+      if (raw) {
+        const saved = JSON.parse(raw) as { width?: number; height?: number };
+        if (saved.width) el.style.width = `${saved.width}px`;
+        if (saved.height) el.style.height = `${saved.height}px`;
+      }
+    } catch { /* ignore */ }
+
+    const obs = new ResizeObserver(() => {
+      try {
+        const data: Record<string, number> = {};
+        if (el.style.width) data.width = parseInt(el.style.width, 10);
+        if (el.style.height) data.height = parseInt(el.style.height, 10);
+        if (Object.keys(data).length) localStorage.setItem('habit_dialog_size', JSON.stringify(data));
+      } catch { /* ignore */ }
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [open]);
 
   const [month, setMonth] = useState(() => toYearMonth(new Date()));
 
@@ -111,7 +138,7 @@ export function HabitTrackerDialog({ open, onOpenChange }: HabitTrackerDialogPro
       onMouseDown={(e) => { pointerDownOnOverlay.current = e.target === e.currentTarget; }}
       onClick={(e) => { if (e.target === e.currentTarget && pointerDownOnOverlay.current) onOpenChange(false); }}
     >
-      <div className="habit-dialog" role="dialog" aria-modal="true" aria-label="Трекер привычек">
+      <div className="habit-dialog" ref={dialogRef} role="dialog" aria-modal="true" aria-label="Трекер привычек">
         <div className="habit-dialog__header">
           <div className="habit-dialog__nav">
             <button

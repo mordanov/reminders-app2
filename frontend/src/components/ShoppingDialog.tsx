@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
@@ -32,6 +32,48 @@ export function ShoppingDialog({ open, onOpenChange }: ShoppingDialogProps) {
   const queryClient = useQueryClient();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pointerDownOnOverlay = useRef(false);
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const textareaEls = useRef<Map<string, HTMLTextAreaElement | null>>(new Map());
+  const stableTextareaRefs = useRef<Map<string, (el: HTMLTextAreaElement | null) => void>>(new Map());
+
+  const getTextareaRef = useCallback((key: string) => {
+    if (!stableTextareaRefs.current.has(key)) {
+      stableTextareaRefs.current.set(key, (el) => textareaEls.current.set(key, el));
+    }
+    return stableTextareaRefs.current.get(key)!;
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const observers: ResizeObserver[] = [];
+
+    const attach = (el: HTMLElement, lsKey: string, dims: ('width' | 'height')[]) => {
+      try {
+        const raw = localStorage.getItem(lsKey);
+        if (raw) {
+          const saved = JSON.parse(raw) as Record<string, number>;
+          if (saved.width && dims.includes('width')) el.style.width = `${saved.width}px`;
+          if (saved.height && dims.includes('height')) el.style.height = `${saved.height}px`;
+        }
+      } catch { /* ignore */ }
+      const obs = new ResizeObserver(() => {
+        try {
+          const data: Record<string, number> = {};
+          if (dims.includes('width') && el.style.width) data.width = parseInt(el.style.width, 10);
+          if (dims.includes('height') && el.style.height) data.height = parseInt(el.style.height, 10);
+          if (Object.keys(data).length) localStorage.setItem(lsKey, JSON.stringify(data));
+        } catch { /* ignore */ }
+      });
+      obs.observe(el);
+      observers.push(obs);
+    };
+
+    if (dialogRef.current) attach(dialogRef.current, 'shopping_dialog_size', ['width', 'height']);
+    textareaEls.current.forEach((el, key) => { if (el) attach(el, `shopping_ta_${key}`, ['height']); });
+
+    return () => { observers.forEach((o) => o.disconnect()); };
+  }, [open]);
 
   const { data } = useQuery({
     queryKey: ["shoppingList"],
@@ -69,7 +111,7 @@ export function ShoppingDialog({ open, onOpenChange }: ShoppingDialogProps) {
       onMouseDown={(e) => { pointerDownOnOverlay.current = e.target === e.currentTarget; }}
       onClick={(e) => { if (e.target === e.currentTarget && pointerDownOnOverlay.current) onOpenChange(false); }}
     >
-      <div className="shopping-dialog" role="dialog" aria-modal="true" aria-label="Магазины">
+      <div className="shopping-dialog" ref={dialogRef} role="dialog" aria-modal="true" aria-label="Магазины">
         <div className="shopping-dialog__header">
           <h2>🛒 Магазины</h2>
           <button
@@ -90,6 +132,7 @@ export function ShoppingDialog({ open, onOpenChange }: ShoppingDialogProps) {
                   {store.label}
                 </label>
                 <textarea
+                  ref={getTextareaRef(store.key)}
                   className="shopping-cell__input"
                   value={localData[store.key] ?? ""}
                   onChange={(e) => handleChange(store.key, e.target.value)}
@@ -111,6 +154,7 @@ export function ShoppingDialog({ open, onOpenChange }: ShoppingDialogProps) {
                   placeholder="Название..."
                 />
                 <textarea
+                  ref={getTextareaRef(key)}
                   className="shopping-cell__input"
                   value={localData[key] ?? ""}
                   onChange={(e) => handleChange(key, e.target.value)}
