@@ -31,6 +31,7 @@ const CUSTOM_KEYS = ["custom_0", "custom_1", "custom_2"] as const;
 export function ShoppingDialog({ open, onOpenChange }: ShoppingDialogProps) {
   const queryClient = useQueryClient();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pointerDownOnOverlay = useRef(false);
 
   const { data } = useQuery({
     queryKey: ["shoppingList"],
@@ -63,7 +64,11 @@ export function ShoppingDialog({ open, onOpenChange }: ShoppingDialogProps) {
   if (!open) return null;
 
   return (
-    <div className="shopping-overlay" onClick={(e) => { if (e.target === e.currentTarget) onOpenChange(false); }}>
+    <div
+      className="shopping-overlay"
+      onMouseDown={(e) => { pointerDownOnOverlay.current = e.target === e.currentTarget; }}
+      onClick={(e) => { if (e.target === e.currentTarget && pointerDownOnOverlay.current) onOpenChange(false); }}
+    >
       <div className="shopping-dialog" role="dialog" aria-modal="true" aria-label="Магазины">
         <div className="shopping-dialog__header">
           <h2>🛒 Магазины</h2>

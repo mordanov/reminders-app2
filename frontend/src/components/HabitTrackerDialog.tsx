@@ -18,6 +18,7 @@ const ROW_COLORS = [
 export function HabitTrackerDialog({ open, onOpenChange }: HabitTrackerDialogProps) {
   const queryClient = useQueryClient();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pointerDownOnOverlay = useRef(false);
 
   const [month, setMonth] = useState(() => toYearMonth(new Date()));
 
@@ -107,9 +108,8 @@ export function HabitTrackerDialog({ open, onOpenChange }: HabitTrackerDialogPro
   return (
     <div
       className="habit-overlay"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onOpenChange(false);
-      }}
+      onMouseDown={(e) => { pointerDownOnOverlay.current = e.target === e.currentTarget; }}
+      onClick={(e) => { if (e.target === e.currentTarget && pointerDownOnOverlay.current) onOpenChange(false); }}
     >
       <div className="habit-dialog" role="dialog" aria-modal="true" aria-label="Трекер привычек">
         <div className="habit-dialog__header">
