@@ -16,7 +16,8 @@ server {
     location = /logout {
         auth_basic off;
         add_header 'WWW-Authenticate' 'Basic realm="Reminders"' always;
-        return 401;
+        add_header 'Content-Type' 'text/html; charset=utf-8' always;
+        return 401 '<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>&#1042;&#1099;&#1093;&#1086;&#1076;</title><style>body{font:16px system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f8f1e5;color:#333}h1{margin:0 0 12px;font-size:1.5rem}p{margin:0 0 20px;color:#666}a{display:inline-block;padding:10px 22px;background:#84602b;color:#fff;border-radius:6px;text-decoration:none;font-size:1rem}a:hover{background:#6b4e23}</style></head><body><h1>&#1042;&#1099; &#1074;&#1099;&#1096;&#1083;&#1080;</h1><p>&#1053;&#1072;&#1078;&#1084;&#1080;&#1090;&#1077; &#171;&#1054;&#1090;&#1084;&#1077;&#1085;&#1072;&#187;, &#1077;&#1089;&#1083;&#1080; &#1089;&#1085;&#1086;&#1074;&#1072; &#1087;&#1086;&#1103;&#1074;&#1080;&#1083;&#1089;&#1103; &#1079;&#1072;&#1087;&#1088;&#1086;&#1089; &#1074;&#1093;&#1086;&#1076;&#1072;.</p><a href="/">&#1042;&#1086;&#1081;&#1090;&#1080; &#1089;&#1085;&#1086;&#1074;&#1072;</a></body></html>';
     }
 
     location = /openapi.json {

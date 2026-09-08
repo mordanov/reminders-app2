@@ -379,27 +379,29 @@ function App() {
             {liveStatus === "connected" ? <WifiHigh aria-hidden="true" /> : <WifiSlash aria-hidden="true" />}
             {t(liveStatus === "connected" ? "live" : "reconnecting")}
           </div>
-          <label className="language-switch">
-            <GlobeHemisphereWest aria-hidden="true" />
-            <span className="sr-only">{t("language")}</span>
-            <select
-              value={preferences?.locale ?? "ru"}
-              onChange={(event) => updatePreferences.mutate({ locale: event.target.value as Locale })}
+          <div className="topbar__right">
+            <label className="language-switch">
+              <GlobeHemisphereWest aria-hidden="true" />
+              <span className="sr-only">{t("language")}</span>
+              <select
+                value={preferences?.locale ?? "ru"}
+                onChange={(event) => updatePreferences.mutate({ locale: event.target.value as Locale })}
+              >
+                <option value="ru">RU</option>
+                <option value="en">EN</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="topbar__logout"
+              onClick={() => { window.location.href = "/logout"; }}
+              title={meQuery.data ? t("loggedInAs", { username: meQuery.data.username }) : t("logout")}
+              aria-label={t("logout")}
             >
-              <option value="ru">RU</option>
-              <option value="en">EN</option>
-            </select>
-          </label>
-          <button
-            type="button"
-            className="topbar__logout"
-            onClick={() => { window.location.href = "/logout"; }}
-            title={meQuery.data ? t("loggedInAs", { username: meQuery.data.username }) : t("logout")}
-            aria-label={t("logout")}
-          >
-            <SignOut aria-hidden="true" />
-            <span>{t("logout")}</span>
-          </button>
+              <SignOut aria-hidden="true" />
+              <span>{t("logout")}</span>
+            </button>
+          </div>
         </header>
 
         {notice ? (
