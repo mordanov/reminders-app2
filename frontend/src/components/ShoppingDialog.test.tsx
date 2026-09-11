@@ -45,6 +45,7 @@ describe("ShoppingDialog", () => {
     const onClose = vi.fn();
     const { container } = renderWithClient(<ShoppingDialog open={true} onOpenChange={onClose} />);
     const overlay = container.querySelector(".shopping-overlay")!;
+    fireEvent.mouseDown(overlay);
     fireEvent.click(overlay);
     expect(onClose).toHaveBeenCalledWith(false);
   });
